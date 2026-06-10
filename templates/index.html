@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Huancayoga | Yoga y bienestar en Huancayo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS propio -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/estilos.css') }}">
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar navbar-expand-lg navbar-huancayoga fixed-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="/">Huancayoga</a>
+
+            <div class="d-flex flex-wrap gap-2">
+                <a href="/" class="btn btn-menu">Inicio</a>
+                <a href="/reservar" class="btn btn-menu">Reservar cita</a>
+                <a href="/productos" class="btn btn-menu">Productos</a>
+
+                {% if session.get("cliente_id") %}
+                    <a href="/cliente/dashboard" class="btn btn-menu-cliente">Mi cuenta</a>
+                    <a href="/cliente/logout" class="btn btn-danger btn-sm">Salir</a>
+                {% else %}
+                    <a href="/cliente/login" class="btn btn-menu-cliente">Ingresar</a>
+                    <a href="/cliente/registro" class="btn btn-registrarse">Registrarse</a>
+                {% endif %}
+
+                <a href="/admin/login" class="btn btn-admin">Admin</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HERO PRINCIPAL -->
+    <section class="hero-principal">
+        <div class="hero-capa">
+            <div class="container">
+                <div class="row align-items-center hero-contenido">
+                    
+                    <div class="col-lg-6">
+                        <span class="etiqueta-hero">Yoga · Meditación · Bienestar en Huancayo</span>
+
+                        <h1 class="titulo-hero">
+                            Encuentra calma, equilibrio y energía en Huancayoga
+                        </h1>
+
+                        <p class="texto-hero">
+                            Un espacio creado para conectar con tu cuerpo, tu respiración y tu paz interior,
+                            inspirado en la tranquilidad de Huancayo y la energía de sus montañas.
+                        </p>
+
+                        <div class="d-flex flex-wrap gap-3 mt-4">
+                            <a href="/reservar" class="btn btn-principal">Reservar cita</a>
+                            <a href="/productos" class="btn btn-secundario">Ver productos</a>
+                            <a href="https://wa.me/51964819551?text=Hola,%20quiero%20información%20sobre%20Huancayoga"
+                               target="_blank"
+                               class="btn btn-whatsapp">
+                                WhatsApp
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-6 mt-5 mt-lg-0">
+                        <div class="hero-imagen-contenedor">
+                            <img src="{{ url_for('static', filename='img/dueña/dueño_1.jpg') }}"
+                                 alt="Dueña de Huancayoga meditando"
+                                 class="img-fluid hero-imagen">
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SOBRE HUANCAYOGA -->
+    <section class="seccion seccion-clara">
+        <div class="container">
+            <div class="row align-items-center g-5">
+                
+                <div class="col-lg-6">
+                    <img src="{{ url_for('static', filename='img/index/nevado_huaytapallana.jpg') }}"
+                         alt="Nevado Huaytapallana Huancayo"
+                         class="img-fluid imagen-redondeada sombra-suave">
+                </div>
+
+                <div class="col-lg-6">
+                    <span class="subtitulo-seccion">Huancayo y bienestar</span>
+                    <h2 class="titulo-seccion">Yoga con esencia andina</h2>
+
+                    <p class="parrafo">
+                        Huancayoga nace como un espacio de tranquilidad, salud y conexión personal.
+                        Su propuesta une la práctica del yoga con la energía natural de Huancayo,
+                        sus paisajes, su calma y su espíritu de crecimiento.
+                    </p>
+
+                    <p class="parrafo">
+                        Aquí cada clase busca ayudarte a respirar mejor, liberar tensiones,
+                        fortalecer tu cuerpo y encontrar un momento de paz en tu día.
+                    </p>
+
+                    <a href="/cliente/registro" class="btn btn-principal mt-2">Unirme a Huancayoga</a>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- SERVICIOS DESTACADOS -->
+    <section class="seccion seccion-pastel">
+        <div class="container">
+
+            <div class="text-center mb-5">
+                <span class="subtitulo-seccion">Servicios</span>
+                <h2 class="titulo-seccion">Elige cómo empezar tu camino</h2>
+                <p class="descripcion-seccion">
+                    Clases y experiencias pensadas para distintas edades, objetivos y necesidades.
+                </p>
+            </div>
+
+            <div class="row g-4">
+                
+                <div class="col-md-3">
+                    <div class="tarjeta-servicio h-100">
+                        <div class="icono-servicio">🧘</div>
+                        <h4>Yoga individual</h4>
+                        <p>Sesiones personalizadas para avanzar a tu ritmo y según tus objetivos.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="tarjeta-servicio h-100">
+                        <div class="icono-servicio">🌿</div>
+                        <h4>Yoga grupal</h4>
+                        <p>Clases en comunidad para compartir bienestar, calma y movimiento.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="tarjeta-servicio h-100">
+                        <div class="icono-servicio">✨</div>
+                        <h4>Yoga para niños</h4>
+                        <p>Actividades para concentración, respiración, equilibrio y relajación.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="tarjeta-servicio h-100">
+                        <div class="icono-servicio">🌙</div>
+                        <h4>Meditación</h4>
+                        <p>Sesiones para reducir el estrés y conectar con tu paz interior.</p>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- PALABRAS DE LA DUEÑA -->
+    <section class="seccion seccion-duena">
+        <div class="container">
+            <div class="row align-items-center g-5">
+
+                <div class="col-lg-5">
+                    <img src="{{ url_for('static', filename='img/dueña/dueño_2.jpg') }}"
+                         alt="Dueña de Huancayoga"
+                         class="img-fluid imagen-duena sombra-suave">
+                </div>
+
+                <div class="col-lg-7">
+                    <span class="subtitulo-seccion">Palabras de la dueña</span>
+                    <h2 class="titulo-seccion">“El yoga es volver a ti”</h2>
+
+                    <p class="parrafo-grande">
+                        “Huancayoga fue creado para acompañar a cada persona en su proceso de bienestar.
+                        Cada respiración, cada postura y cada momento de silencio son una oportunidad
+                        para reconectar con lo más valioso: uno mismo.”
+                    </p>
+
+                    <p class="parrafo">
+                        Nuestro compromiso es brindar un espacio seguro, humano y tranquilo,
+                        donde puedas sentirte acompañado en tu camino físico, emocional y espiritual.
+                    </p>
+
+                    <a href="/reservar" class="btn btn-principal mt-2">Reservar mi primera clase</a>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- GALERÍA -->
+    <section class="seccion seccion-clara">
+        <div class="container">
+
+            <div class="text-center mb-5">
+                <span class="subtitulo-seccion">Galería</span>
+                <h2 class="titulo-seccion">Momentos de Huancayoga</h2>
+                <p class="descripcion-seccion">
+                    Conoce parte del trabajo, las clases y el ambiente de bienestar que se vive en Huancayoga.
+                </p>
+            </div>
+
+            <div class="row g-4">
+                
+                <div class="col-md-4">
+                    <div class="galeria-card">
+                        <img src="{{ url_for('static', filename='img/index/huancayoga_1.jpg') }}"
+                             alt="Trabajo Huancayoga 1"
+                             class="img-fluid galeria-img">
+                        <div class="galeria-texto">
+                            <h5>Práctica consciente</h5>
+                            <p>Momentos de calma, respiración y movimiento.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="galeria-card">
+                        <img src="{{ url_for('static', filename='img/index/huancayoga_2.jpg') }}"
+                             alt="Trabajo Huancayoga 2"
+                             class="img-fluid galeria-img">
+                        <div class="galeria-texto">
+                            <h5>Bienestar personal</h5>
+                            <p>Un espacio para reconectar contigo mismo.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="galeria-card">
+                        <img src="{{ url_for('static', filename='img/index/huancayoga.jpg') }}"
+                             alt="Trabajo Huancayoga 3"
+                             class="img-fluid galeria-img">
+                        <div class="galeria-texto">
+                            <h5>Energía y equilibrio</h5>
+                            <p>Yoga para fortalecer cuerpo, mente y espíritu.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- BLOQUE INSPIRADOR -->
+    <section class="bloque-inspirador">
+        <div class="container text-center">
+            <img src="{{ url_for('static', filename='img/dueña/dueño_3.jpg') }}"
+                 alt="Meditación Huancayoga"
+                 class="imagen-circular mb-4">
+
+            <p class="frase-principal">
+                “Respira profundo, suelta lo que pesa y permite que la calma vuelva a ti.”
+            </p>
+
+            <span class="autor-frase">Huancayoga</span>
+        </div>
+    </section>
+
+    <!-- PRODUCTOS Y RESERVAS -->
+    <section class="seccion seccion-pastel">
+        <div class="container">
+            <div class="row g-4">
+
+                <div class="col-md-6">
+                    <div class="tarjeta-final h-100">
+                        <h3>Reserva tu cita</h3>
+                        <p>
+                            Agenda tu clase de yoga desde la web y elige el horario que mejor se acomode a ti.
+                        </p>
+                        <a href="/reservar" class="btn btn-principal">Reservar ahora</a>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="tarjeta-final h-100">
+                        <h3>Productos de bienestar</h3>
+                        <p>
+                            Revisa productos relacionados al yoga, relajación, meditación y autocuidado.
+                        </p>
+                        <a href="/productos" class="btn btn-secundario">Ver productos</a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer-huancayoga">
+        <div class="container">
+            <div class="row g-4">
+
+                <div class="col-md-4">
+                    <h4>Huancayoga</h4>
+                    <p>
+                        Espacio de yoga, meditación y bienestar en Huancayo.
+                    </p>
+                </div>
+
+                <div class="col-md-4">
+                    <h5>Enlaces</h5>
+                    <p><a href="/reservar">Reservar cita</a></p>
+                    <p><a href="/productos">Productos</a></p>
+                    <p><a href="/cliente/registro">Registrarse</a></p>
+                </div>
+
+                <div class="col-md-4">
+                    <h5>Contacto</h5>
+                    <p>Huancayo, Perú</p>
+                    <p>WhatsApp: 906458296</p>
+                </div>
+
+            </div>
+
+            <hr>
+
+            <p class="text-center mb-0">
+                © 2026 Huancayoga - Sistema web de reservas y productos.
+            </p>
+        </div>
+    </footer>
+
+</body>
+</html>
