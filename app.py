@@ -1,21 +1,202 @@
 from flask import Flask, render_template, request, redirect, url_for, flash,session
 from flask_mysqldb import MySQL
 from dotenv import load_dotenv
+from flask_mail import Mail, Message
 import os
+import requests
 
 load_dotenv()
 
 app = Flask(__name__)
 
-app.secret_key = os.getenv("SECRET_KEY")
+app.secret_key = os.getenv("SECRET_KEY","huancayoga_clave_temporal_2026")
 
 # Configuración de MySQL
 app.config["MYSQL_HOST"] = os.getenv("DB_HOST")
 app.config["MYSQL_USER"] = os.getenv("DB_USER")
 app.config["MYSQL_PASSWORD"] = os.getenv("DB_PASSWORD")
 app.config["MYSQL_DB"] = os.getenv("DB_NAME")
+app.config["MYSQL_PORT"] = int(os.getenv("DB_PORT", 3306))
+
+# Configuración de correo
+app.config["MAIL_SERVER"] = os.getenv("MAIL_SERVER")
+app.config["MAIL_PORT"] = int(os.getenv("MAIL_PORT", 587))
+app.config["MAIL_USE_TLS"] = os.getenv("MAIL_USE_TLS", "True") == "True"
+app.config["MAIL_USERNAME"] = os.getenv("MAIL_USERNAME")
+app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PASSWORD")
+app.config["MAIL_DEFAULT_SENDER"] = os.getenv("MAIL_DEFAULT_SENDER")
+
+mail = Mail(app)
 
 mysql = MySQL(app)
+
+
+# funciones
+
+def enviar_correo(destinatario, asunto, contenido_html):
+    try:
+        if not destinatario:
+            return False
+
+        mensaje = Message(
+            subject=asunto,
+            recipients=[destinatario],
+            html=contenido_html
+        )
+
+        mail.send(mensaje)
+        return True
+
+    except Exception as e:
+        print("Error al enviar correo:", e)
+        return False
+    
+def correo_bienvenida(nombre):
+    return f"""
+    <div style="font-family: Arial, sans-serif; background:#faf7f0; padding:30px;">
+        <div style="max-width:600px; margin:auto; background:white; border-radius:18px; padding:30px;">
+            <h1 style="color:#315545;">Bienvenido a Huancayoga 🌿</h1>
+            <p>Hola <strong>{nombre}</strong>,</p>
+            <p>
+                Gracias por registrarte en Huancayoga, un espacio creado para la relajación,
+                el bienestar y la conexión contigo mismo.
+            </p>
+            <p>
+                Desde ahora podrás reservar citas, ver productos y recibir novedades especiales.
+            </p>
+            <p style="color:#5f9274; font-weight:bold;">
+                Respira, conecta y empieza tu camino de bienestar.
+            </p>
+            <hr>
+            <p style="font-size:13px; color:#777;">Huancayoga - Huancayo, Perú</p>
+        </div>
+    </div>
+    """
+
+def correo_nuevo_producto(nombre_producto, descripcion, precio):
+    return f"""
+    <div style="font-family: Arial, sans-serif; background:#faf7f0; padding:30px;">
+        <div style="max-width:600px; margin:auto; background:white; border-radius:18px; padding:30px;">
+            <h1 style="color:#315545;">Nuevo producto en Huancayoga 🛍️</h1>
+            <p>Tenemos un nuevo producto disponible para ti:</p>
+
+            <h2 style="color:#5f9274;">{nombre_producto}</h2>
+            <p>{descripcion}</p>
+            <p><strong>Precio:</strong> S/ {precio}</p>
+
+            <p>
+                Ingresa al sistema para verlo y realizar tu pedido.
+            </p>
+
+            <p style="color:#5f9274; font-weight:bold;">
+                Gracias por formar parte de Huancayoga.
+            </p>
+        </div>
+    </div>
+    """
+
+def correo_nueva_publicacion(titulo, contenido):
+    return f"""
+    <div style="font-family: Arial, sans-serif; background:#faf7f0; padding:30px;">
+        <div style="max-width:600px; margin:auto; background:white; border-radius:18px; padding:30px;">
+            <h1 style="color:#315545;">Nueva inspiración de Huancayoga ✨</h1>
+
+            <h2 style="color:#5f9274;">{titulo}</h2>
+
+            <p>{contenido}</p>
+
+            <p>
+                Te invitamos a ingresar al sistema y conocer más sobre el trabajo,
+                mensajes y momentos de Huancayoga.
+            </p>
+
+            <p style="color:#5f9274; font-weight:bold;">
+                Que tengas un día lleno de calma y energía.
+            </p>
+        </div>
+    </div>
+    """
+
+def correo_confirmacion_cita(nombre, servicio, fecha, hora):
+    return f"""
+    <div style="font-family: Arial, sans-serif; background:#faf7f0; padding:30px;">
+        <div style="max-width:600px; margin:auto; background:white; border-radius:18px; padding:30px;">
+            <h1 style="color:#315545;">Tu cita fue confirmada ✅</h1>
+
+            <p>Hola <strong>{nombre}</strong>,</p>
+
+            <p>Tu cita en Huancayoga ha sido confirmada.</p>
+
+            <ul>
+                <li><strong>Servicio:</strong> {servicio}</li>
+                <li><strong>Fecha:</strong> {fecha}</li>
+                <li><strong>Hora:</strong> {hora}</li>
+            </ul>
+
+            <p>
+                Te esperamos para compartir un momento de bienestar, respiración y relajación.
+            </p>
+
+            <p style="color:#5f9274; font-weight:bold;">
+                Gracias por confiar en Huancayoga.
+            </p>
+        </div>
+    </div>
+    """
+
+def correo_recordatorio_cita(nombre, servicio, fecha, hora):
+    return f"""
+    <div style="font-family: Arial, sans-serif; background:#faf7f0; padding:30px;">
+        <div style="max-width:600px; margin:auto; background:white; border-radius:18px; padding:30px;">
+            <h1 style="color:#315545;">Recordatorio de tu cita 🌿</h1>
+
+            <p>Hola <strong>{nombre}</strong>,</p>
+
+            <p>Te recordamos que tienes una cita programada en Huancayoga.</p>
+
+            <ul>
+                <li><strong>Servicio:</strong> {servicio}</li>
+                <li><strong>Fecha:</strong> {fecha}</li>
+                <li><strong>Hora:</strong> {hora}</li>
+            </ul>
+
+            <p>
+                Recuerda asistir con ropa cómoda y llegar unos minutos antes.
+            </p>
+
+            <p style="color:#5f9274; font-weight:bold;">
+                Te esperamos con mucha energía positiva.
+            </p>
+        </div>
+    </div>
+    """
+
+def correo_pedido_registrado(nombre, producto, cantidad, total):
+    return f"""
+    <div style="font-family: Arial, sans-serif; background:#faf7f0; padding:30px;">
+        <div style="max-width:600px; margin:auto; background:white; border-radius:18px; padding:30px;">
+            <h1 style="color:#315545;">Pedido registrado correctamente 🛒</h1>
+
+            <p>Hola <strong>{nombre}</strong>,</p>
+
+            <p>Tu pedido fue registrado en el sistema de Huancayoga.</p>
+
+            <ul>
+                <li><strong>Producto:</strong> {producto}</li>
+                <li><strong>Cantidad:</strong> {cantidad}</li>
+                <li><strong>Total:</strong> S/ {total}</li>
+            </ul>
+
+            <p>
+                La dueña se comunicará contigo para coordinar el pago y la entrega.
+            </p>
+
+            <p style="color:#5f9274; font-weight:bold;">
+                Gracias por apoyar Huancayoga.
+            </p>
+        </div>
+    </div>
+    """
 
 
 @app.route("/")
@@ -138,6 +319,7 @@ def comprar(id):
         nombre_cliente = request.form["nombre_cliente"]
         celular = request.form["celular"]
         cantidad = int(request.form["cantidad"])
+        correo = request.form["correo"]
 
         precio = float(producto[3])
         stock = int(producto[4])
@@ -180,11 +362,18 @@ def comprar(id):
         mysql.connection.commit()
         cur.close()
 
+        enviar_correo(
+        correo,
+        "Pedido registrado en Huancayoga 🛒",
+        correo_pedido_registrado(nombre_cliente, producto[1], cantidad, total)
+        )
+
         flash("Pedido registrado correctamente. Ahora puedes coordinar el pago por WhatsApp.", "success")
         return redirect(url_for("comprar", id=id))
 
     cur.close()
     return render_template("comprar.html", producto=producto)
+
 @app.route("/admin/productos/nuevo", methods=["GET", "POST"])
 def admin_nuevo_producto():
     if "admin_id" not in session:
@@ -213,6 +402,19 @@ def admin_nuevo_producto():
 
         mysql.connection.commit()
         cur.close()
+
+        # Enviar correo a todos los clientes registrados
+        cur = mysql.connection.cursor()
+        cur.execute("SELECT correo FROM clientes WHERE correo IS NOT NULL AND correo != '' AND estado = 'activo'")
+        clientes = cur.fetchall()
+        cur.close()
+
+        for cliente in clientes:
+            enviar_correo(
+                cliente[0],
+                "Nuevo producto disponible en Huancayoga 🛍️",
+                correo_nuevo_producto(nombre, descripcion, precio)
+                            )
 
         flash("Producto registrado correctamente.", "success")
         return redirect(url_for("admin_productos"))
@@ -419,14 +621,42 @@ def cambiar_estado_reserva(id, estado):
         return redirect(url_for("admin_reservas"))
 
     cur = mysql.connection.cursor()
+
     cur.execute("""
-        UPDATE reservas
-        SET estado = %s
-        WHERE id = %s
+    SELECT 
+        r.nombre_cliente,
+        r.correo,
+        s.nombre,
+        r.fecha,
+        r.hora
+    FROM reservas r
+    INNER JOIN servicios s ON r.servicio_id = s.id
+    WHERE r.id = %s
+""", (id,))
+
+    reserva = cur.fetchone()
+
+    cur.execute("""
+            UPDATE reservas
+            SET estado = %s
+            WHERE id = %s
     """, (estado, id))
 
     mysql.connection.commit()
     cur.close()
+
+    if reserva and estado == "confirmada":
+        nombre_cliente = reserva[0]
+        correo_cliente = reserva[1]
+        servicio = reserva[2]
+        fecha = reserva[3]
+        hora = reserva[4]
+
+        enviar_correo(
+            correo_cliente,
+            "Tu cita en Huancayoga fue confirmada ✅",
+            correo_confirmacion_cita(nombre_cliente, servicio, fecha, hora)
+    )
 
     flash("Estado de reserva actualizado correctamente.", "success")
     return redirect(url_for("admin_reservas"))
@@ -588,6 +818,12 @@ def cliente_registro():
         session["cliente_id"] = cliente[0]
         session["cliente_dni"] = cliente[1]
         session["cliente_nombre"] = cliente[2]
+        
+        enviar_correo(
+    correo,
+    "Bienvenido a Huancayoga 🌿",
+    correo_bienvenida(nombres)
+)
 
         flash("Registro completado correctamente.", "success")
         return redirect(url_for("cliente_dashboard"))
@@ -612,6 +848,43 @@ def cliente_logout():
 
     flash("Sesión de cliente cerrada correctamente.", "success")
     return redirect(url_for("index"))
+
+@app.route("/admin/reserva/recordatorio/<int:id>")
+def enviar_recordatorio_reserva(id):
+    if "admin_id" not in session:
+        flash("Debes iniciar sesión para ingresar al panel.", "warning")
+        return redirect(url_for("admin_login"))
+
+    cur = mysql.connection.cursor()
+
+    cur.execute("""
+        SELECT 
+            r.nombre_cliente,
+            r.correo,
+            s.nombre,
+            r.fecha,
+            r.hora
+        FROM reservas r
+        INNER JOIN servicios s ON r.servicio_id = s.id
+        WHERE r.id = %s
+    """, (id,))
+
+    reserva = cur.fetchone()
+    cur.close()
+
+    if reserva:
+        enviar_correo(
+            reserva[1],
+            "Recordatorio de tu cita en Huancayoga 🌿",
+            correo_recordatorio_cita(reserva[0], reserva[2], reserva[3], reserva[4])
+        )
+
+        flash("Recordatorio enviado correctamente.", "success")
+    else:
+        flash("No se encontró la reserva.", "danger")
+
+    return redirect(url_for("admin_reservas"))
+
 
 if __name__ == "__main__":
     app.run(debug=True)
