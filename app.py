@@ -201,7 +201,7 @@ def correo_pedido_registrado(nombre, producto, cantidad, total):
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("public/index.html")
 
 
 @app.route("/check-db")
@@ -229,15 +229,24 @@ def check_db():
 @app.route("/reservar", methods=["GET", "POST"])
 def reservar():
     if "cliente_id" not in session:
-        flash("Para reservar una cita primero debes registrarte o iniciar sesión.", "warning")
+        flash(
+            "Para reservar una cita primero debes registrarte o iniciar sesión.",
+            "warning"
+        )
         return redirect(url_for("cliente_login"))
+
     cur = mysql.connection.cursor()
 
-    # Obtener servicios activos para mostrarlos en el formulario
-    cur.execute("SELECT id, nombre, precio FROM servicios WHERE estado = 'activo'")
+    cur.execute("""
+        SELECT id, nombre, precio
+        FROM servicios
+        WHERE estado = 'activo'
+    """)
+
     servicios = cur.fetchall()
 
     if request.method == "POST":
+        cliente_id = session["cliente_id"]
         nombre_cliente = request.form["nombre_cliente"]
         celular = request.form["celular"]
         correo = request.form["correo"]
@@ -247,10 +256,21 @@ def reservar():
         comentario = request.form["comentario"]
 
         cur.execute("""
-            INSERT INTO reservas 
-            (nombre_cliente, celular, correo, servicio_id, fecha, hora, comentario, estado)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, 'pendiente')
+            INSERT INTO reservas
+            (
+                cliente_id,
+                nombre_cliente,
+                celular,
+                correo,
+                servicio_id,
+                fecha,
+                hora,
+                comentario,
+                estado
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'pendiente')
         """, (
+            cliente_id,
             nombre_cliente,
             celular,
             correo,
@@ -263,12 +283,19 @@ def reservar():
         mysql.connection.commit()
         cur.close()
 
-        flash("Reserva registrada correctamente. El dueño se comunicará contigo para confirmar.", "success")
-        return redirect(url_for("reservar"))
+        flash(
+            "Reserva registrada correctamente. La dueña revisará tu solicitud.",
+            "success"
+        )
+
+        return redirect(url_for("cliente_mis_citas"))
 
     cur.close()
-    return render_template("reservar.html", servicios=servicios)
 
+    return render_template(
+        "reservar.html",
+        servicios=servicios
+    )
 
 
 # ==========================
@@ -336,17 +363,27 @@ def comprar(id):
 
         total = precio * cantidad
 
+        cliente_id = session["cliente_id"]
         cur.execute("""
             INSERT INTO pedidos
-            (nombre_cliente, celular, producto_id, cantidad, total, estado)
-            VALUES (%s, %s, %s, %s, %s, 'pendiente')
-        """, (
-            nombre_cliente,
-            celular,
-            id,
-            cantidad,
-            total
-        ))
+            (
+                cliente_id,
+                 nombre_cliente,
+                celular,
+                producto_id,
+                cantidad,
+                total,
+                estado
+            )
+    VALUES (%s, %s, %s, %s, %s, %s, 'pendiente')
+""", (
+    cliente_id,
+    nombre_cliente,
+    celular,
+    id,
+    cantidad,
+    total
+))
 
         nuevo_stock = stock - cantidad
 
@@ -834,10 +871,205 @@ def cliente_registro():
 @app.route("/cliente/dashboard")
 def cliente_dashboard():
     if "cliente_id" not in session:
-        flash("Primero debes iniciar sesión o registrarte.", "warning")
+        flash("Debes iniciar sesión como cliente.", "warning")
         return redirect(url_for("cliente_login"))
 
-    return render_template("cliente_dashboard.html")
+    cliente_id = session["cliente_id"]
+
+    cur = mysql.connection.cursor()
+
+    # Datos del cliente
+    cur.execute("""
+        SELECT
+            id,
+            dni,
+            nombres,
+            apellido_paterno,
+            apellido_materno,
+            celular,
+            correo
+        FROM clientes
+        WHERE id = %s
+    """, (cliente_id,))
+
+    cliente = cur.fetchone()
+
+    # Total de citas del cliente
+    cur.execute("""
+        SELECT COUNT(*)
+        FROM reservas
+        WHERE cliente_id = %s
+    """, (cliente_id,))
+
+    total_citas = cur.fetchone()[0]
+
+    # Citas pendientes
+    cur.execute("""
+        SELECT COUNT(*)
+        FROM reservas
+        WHERE cliente_id = %s
+        AND estado = 'pendiente'
+    """, (cliente_id,))
+
+    citas_pendientes = cur.fetchone()[0]
+
+    # Total de pedidos
+    cur.execute("""
+        SELECT COUNT(*)
+        FROM pedidos
+        WHERE cliente_id = %s
+    """, (cliente_id,))
+
+    total_pedidos = cur.fetchone()[0]
+
+    # Próxima cita
+    cur.execute("""
+        SELECT
+            r.id,
+            s.nombre,
+            r.fecha,
+            r.hora,
+            r.estado
+        FROM reservas r
+        INNER JOIN servicios s
+            ON r.servicio_id = s.id
+        WHERE r.cliente_id = %s
+        AND r.fecha >= CURDATE()
+        AND r.estado IN ('pendiente', 'confirmada')
+        ORDER BY r.fecha ASC, r.hora ASC
+        LIMIT 1
+    """, (cliente_id,))
+
+    proxima_cita = cur.fetchone()
+
+    # Última publicación
+    cur.execute("""
+        SELECT
+            id,
+            titulo,
+            contenido,
+            imagen,
+            tipo,
+            fecha_publicacion
+        FROM publicaciones
+        WHERE estado = 'activo'
+        ORDER BY fecha_publicacion DESC
+        LIMIT 1
+    """)
+
+    ultima_publicacion = cur.fetchone()
+
+    cur.close()
+
+    return render_template(
+        "cliente/dashboard.html",
+        cliente=cliente,
+        total_citas=total_citas,
+        citas_pendientes=citas_pendientes,
+        total_pedidos=total_pedidos,
+        proxima_cita=proxima_cita,
+        ultima_publicacion=ultima_publicacion
+    )
+@app.route("/cliente/mis-citas")
+def cliente_mis_citas():
+    if "cliente_id" not in session:
+        flash("Debes iniciar sesión como cliente.", "warning")
+        return redirect(url_for("cliente_login"))
+
+    cliente_id = session["cliente_id"]
+
+    cur = mysql.connection.cursor()
+
+    cur.execute("""
+        SELECT
+            r.id,
+            s.nombre,
+            r.fecha,
+            r.hora,
+            r.comentario,
+            r.estado,
+            r.fecha_registro
+        FROM reservas r
+        INNER JOIN servicios s
+            ON r.servicio_id = s.id
+        WHERE r.cliente_id = %s
+        ORDER BY r.fecha DESC, r.hora DESC
+    """, (cliente_id,))
+
+    citas = cur.fetchall()
+    cur.close()
+
+    return render_template(
+        "cliente/mis_citas.html",
+        citas=citas
+    )
+
+
+@app.route("/cliente/mis-pedidos")
+def cliente_mis_pedidos():
+    if "cliente_id" not in session:
+        flash("Debes iniciar sesión como cliente.", "warning")
+        return redirect(url_for("cliente_login"))
+
+    cliente_id = session["cliente_id"]
+
+    cur = mysql.connection.cursor()
+
+    cur.execute("""
+        SELECT
+            p.id,
+            pr.nombre,
+            p.cantidad,
+            p.total,
+            p.estado,
+            p.fecha_pedido
+        FROM pedidos p
+        INNER JOIN productos pr
+            ON p.producto_id = pr.id
+        WHERE p.cliente_id = %s
+        ORDER BY p.fecha_pedido DESC
+    """, (cliente_id,))
+
+    pedidos = cur.fetchall()
+    cur.close()
+
+    return render_template(
+        "cliente/mis_pedidos.html",
+        pedidos=pedidos
+    )
+
+
+@app.route("/cliente/perfil")
+def cliente_perfil():
+    if "cliente_id" not in session:
+        flash("Debes iniciar sesión como cliente.", "warning")
+        return redirect(url_for("cliente_login"))
+
+    cliente_id = session["cliente_id"]
+
+    cur = mysql.connection.cursor()
+
+    cur.execute("""
+        SELECT
+            id,
+            dni,
+            nombres,
+            apellido_paterno,
+            apellido_materno,
+            celular,
+            correo,
+            fecha_registro
+        FROM clientes
+        WHERE id = %s
+    """, (cliente_id,))
+
+    cliente = cur.fetchone()
+    cur.close()
+
+    return render_template(
+        "cliente/perfil.html",
+        cliente=cliente
+    )
 
 
 @app.route("/cliente/logout")
@@ -884,6 +1116,178 @@ def enviar_recordatorio_reserva(id):
         flash("No se encontró la reserva.", "danger")
 
     return redirect(url_for("admin_reservas"))
+
+# ==========================
+# MÓDULO DE PUBLICACIONES
+# ==========================
+
+@app.route("/admin/publicaciones")
+def admin_publicaciones():
+    if "admin_id" not in session:
+        flash("Debes iniciar sesión para ingresar al panel.", "warning")
+        return redirect(url_for("admin_login"))
+
+    cur = mysql.connection.cursor()
+    cur.execute("""
+        SELECT id, titulo, contenido, imagen, tipo, estado, fecha_publicacion
+        FROM publicaciones
+        ORDER BY fecha_publicacion DESC
+    """)
+    publicaciones = cur.fetchall()
+    cur.close()
+
+    return render_template(
+        "admin/publicaciones.html",
+        publicaciones=publicaciones
+    )
+
+
+@app.route("/admin/publicaciones/nueva", methods=["GET", "POST"])
+def admin_nueva_publicacion():
+    if "admin_id" not in session:
+        flash("Debes iniciar sesión para ingresar al panel.", "warning")
+        return redirect(url_for("admin_login"))
+
+    if request.method == "POST":
+        titulo = request.form["titulo"]
+        contenido = request.form["contenido"]
+        imagen = request.form["imagen"]
+        tipo = request.form["tipo"]
+
+        cur = mysql.connection.cursor()
+        cur.execute("""
+            INSERT INTO publicaciones
+            (titulo, contenido, imagen, tipo, estado)
+            VALUES (%s, %s, %s, %s, 'activo')
+        """, (
+            titulo,
+            contenido,
+            imagen,
+            tipo
+        ))
+
+        mysql.connection.commit()
+        cur.close()
+
+        # Enviar correo a los clientes
+        cur = mysql.connection.cursor()
+        cur.execute("""
+            SELECT correo
+            FROM clientes
+            WHERE correo IS NOT NULL
+            AND correo != ''
+            AND estado = 'activo'
+        """)
+        clientes = cur.fetchall()
+        cur.close()
+
+        for cliente in clientes:
+            enviar_correo(
+                cliente[0],
+                "Nueva publicación de Huancayoga ✨",
+                correo_nueva_publicacion(titulo, contenido)
+            )
+
+        flash("Publicación registrada y notificada correctamente.", "success")
+        return redirect(url_for("admin_publicaciones"))
+
+    return render_template("admin/nueva_publicacion.html")
+
+
+@app.route("/admin/publicaciones/editar/<int:id>", methods=["GET", "POST"])
+def admin_editar_publicacion(id):
+    if "admin_id" not in session:
+        flash("Debes iniciar sesión para ingresar al panel.", "warning")
+        return redirect(url_for("admin_login"))
+
+    cur = mysql.connection.cursor()
+
+    cur.execute("""
+        SELECT id, titulo, contenido, imagen, tipo, estado
+        FROM publicaciones
+        WHERE id = %s
+    """, (id,))
+
+    publicacion = cur.fetchone()
+
+    if publicacion is None:
+        cur.close()
+        flash("La publicación no existe.", "danger")
+        return redirect(url_for("admin_publicaciones"))
+
+    if request.method == "POST":
+        titulo = request.form["titulo"]
+        contenido = request.form["contenido"]
+        imagen = request.form["imagen"]
+        tipo = request.form["tipo"]
+        estado = request.form["estado"]
+
+        cur.execute("""
+            UPDATE publicaciones
+            SET titulo = %s,
+                contenido = %s,
+                imagen = %s,
+                tipo = %s,
+                estado = %s
+            WHERE id = %s
+        """, (
+            titulo,
+            contenido,
+            imagen,
+            tipo,
+            estado,
+            id
+        ))
+
+        mysql.connection.commit()
+        cur.close()
+
+        flash("Publicación actualizada correctamente.", "success")
+        return redirect(url_for("admin_publicaciones"))
+
+    cur.close()
+    return render_template(
+        "admin/editar_publicacion.html",
+        publicacion=publicacion
+    )
+
+
+@app.route("/admin/publicaciones/eliminar/<int:id>")
+def admin_eliminar_publicacion(id):
+    if "admin_id" not in session:
+        flash("Debes iniciar sesión para ingresar al panel.", "warning")
+        return redirect(url_for("admin_login"))
+
+    cur = mysql.connection.cursor()
+    cur.execute("""
+        UPDATE publicaciones
+        SET estado = 'inactivo'
+        WHERE id = %s
+    """, (id,))
+
+    mysql.connection.commit()
+    cur.close()
+
+    flash("Publicación desactivada correctamente.", "success")
+    return redirect(url_for("admin_publicaciones"))
+
+
+@app.route("/publicaciones")
+def publicaciones_publicas():
+    cur = mysql.connection.cursor()
+    cur.execute("""
+        SELECT id, titulo, contenido, imagen, tipo, fecha_publicacion
+        FROM publicaciones
+        WHERE estado = 'activo'
+        ORDER BY fecha_publicacion DESC
+    """)
+    publicaciones = cur.fetchall()
+    cur.close()
+    
+    return render_template(
+        "public/publicaciones.html",
+        publicaciones=publicaciones
+    )
 
 
 if __name__ == "__main__":

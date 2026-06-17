@@ -2,37 +2,100 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard - Huancayoga</title>
+    <title>Panel administrativo - Huancayoga</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- Bootstrap por CDN -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- CSS propio -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/estilos.css') }}">
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet">
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+        rel="stylesheet">
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/estilos.css') }}">
 </head>
-<body>
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-success">
+<body class="admin-body">
+
+    <!-- MENÚ SUPERIOR -->
+    <nav class="navbar navbar-expand-lg navbar-dark admin-navbar">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="/admin/dashboard">Panel Huancayoga</a>
 
-            <div>
-                <a href="/admin/dashboard" class="btn btn-warning btn-sm">Dashboard</a>
-                <a href="/admin/reservas" class="btn btn-light btn-sm">Reservas</a>
-                <a href="/admin/pedidos" class="btn btn-light btn-sm">Pedidos</a>
-                <a href="/admin/productos" class="btn btn-light btn-sm">Productos</a>
-                <a href="/" class="btn btn-outline-light btn-sm">Ver web</a>
-                <a href="/admin/logout" class="btn btn-danger btn-sm">Salir</a>
+            <a class="navbar-brand fw-bold" href="/admin/dashboard">
+                Huancayoga Admin
+            </a>
+
+            <div class="d-flex flex-wrap gap-2">
+                <a href="/admin/dashboard"
+                   class="btn btn-warning btn-sm">
+                    Dashboard
+                </a>
+
+                <a href="/admin/publicaciones"
+                   class="btn btn-light btn-sm">
+                    Publicaciones
+                </a>
+
+                <a href="/admin/reservas"
+                   class="btn btn-light btn-sm">
+                    Reservas
+                </a>
+
+                <a href="/admin/pedidos"
+                   class="btn btn-light btn-sm">
+                    Pedidos
+                </a>
+
+                <a href="/admin/productos"
+                   class="btn btn-light btn-sm">
+                    Productos
+                </a>
+
+                <a href="/"
+                   class="btn btn-outline-light btn-sm">
+                    Ver página
+                </a>
+
+                <a href="/admin/logout"
+                   class="btn btn-danger btn-sm">
+                    Salir
+                </a>
             </div>
+
         </div>
     </nav>
 
-    <section class="container mt-5">
+    <main class="container admin-dashboard">
 
-        <h2 class="text-success fw-bold">Bienvenido, dueño de Huancayoga</h2>
-        <p>Desde este panel podrás revisar reservas, pedidos y productos.</p>
+        <!-- ENCABEZADO -->
+        <section class="admin-welcome">
 
+            <div>
+                <span class="admin-small-title">
+                    Panel de gestión
+                </span>
+
+                <h1>
+                    Bienvenido al panel de Huancayoga
+                </h1>
+
+                <p>
+                    Administra las reservas, pedidos, productos y publicaciones
+                    desde un solo lugar.
+                </p>
+            </div>
+
+            <div class="admin-date">
+                <i class="bi bi-calendar3"></i>
+                Administración general
+            </div>
+
+        </section>
+
+        <!-- MENSAJES -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -43,45 +106,163 @@
             {% endif %}
         {% endwith %}
 
-        <div class="row mt-4">
+        <!-- SECCIÓN RESERVAS -->
+        <section class="admin-module admin-module-green">
 
-            <div class="col-md-3 mb-3">
-                <div class="card shadow p-3 text-center">
-                    <h5>Total reservas</h5>
-                    <h2 class="text-success">{{ total_reservas }}</h2>
-                </div>
+            <div class="admin-module-icon">
+                <i class="bi bi-calendar-check"></i>
             </div>
 
-            <div class="col-md-3 mb-3">
-                <div class="card shadow p-3 text-center">
-                    <h5>Reservas pendientes</h5>
-                    <h2 class="text-warning">{{ reservas_pendientes }}</h2>
-                </div>
+            <div class="admin-module-content">
+                <span class="admin-module-label">
+                    Gestión de citas
+                </span>
+
+                <h2>Reservas registradas</h2>
+
+                <p>
+                    Revisa todas las solicitudes de citas realizadas por los
+                    clientes y controla su estado.
+                </p>
+
+                <a href="/admin/reservas"
+                   class="admin-module-link">
+                    Gestionar reservas
+                    <i class="bi bi-arrow-right"></i>
+                </a>
             </div>
 
-            <div class="col-md-3 mb-3">
-                <div class="card shadow p-3 text-center">
-                    <h5>Total productos</h5>
-                    <h2 class="text-primary">{{ total_productos }}</h2>
-                </div>
+            <div class="admin-module-number">
+                <span>{{ total_reservas }}</span>
+                <small>Total</small>
             </div>
 
-            <div class="col-md-3 mb-3">
-                <div class="card shadow p-3 text-center">
-                    <h5>Pedidos pendientes</h5>
-                    <h2 class="text-danger">{{ pedidos_pendientes }}</h2>
-                </div>
+        </section>
+
+        <!-- SECCIÓN RESERVAS PENDIENTES -->
+        <section class="admin-module admin-module-orange">
+
+            <div class="admin-module-icon">
+                <i class="bi bi-clock-history"></i>
             </div>
 
-        </div>
+            <div class="admin-module-content">
+                <span class="admin-module-label">
+                    Atención requerida
+                </span>
 
-        <div class="mt-4">
-            <a href="/admin/reservas" class="btn btn-success">Ver reservas</a>
-            <a href="/admin/pedidos" class="btn btn-outline-success">Ver pedidos</a>
-            <a href="/admin/productos" class="btn btn-outline-success">Ver productos</a>
-        </div>
+                <h2>Reservas pendientes</h2>
 
-    </section>
+                <p>
+                    Son las citas que todavía deben ser revisadas y confirmadas
+                    por la dueña de Huancayoga.
+                </p>
+
+                <a href="/admin/reservas"
+                   class="admin-module-link">
+                    Revisar pendientes
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+
+            <div class="admin-module-number">
+                <span>{{ reservas_pendientes }}</span>
+                <small>Pendientes</small>
+            </div>
+
+        </section>
+
+        <!-- SECCIÓN PRODUCTOS -->
+        <section class="admin-module admin-module-blue">
+
+            <div class="admin-module-icon">
+                <i class="bi bi-box-seam"></i>
+            </div>
+
+            <div class="admin-module-content">
+                <span class="admin-module-label">
+                    Inventario
+                </span>
+
+                <h2>Productos disponibles</h2>
+
+                <p>
+                    Administra los productos, precios, imágenes, estados y
+                    cantidades disponibles en el inventario.
+                </p>
+
+                <a href="/admin/productos"
+                   class="admin-module-link">
+                    Administrar productos
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+
+            <div class="admin-module-number">
+                <span>{{ total_productos }}</span>
+                <small>Productos</small>
+            </div>
+
+        </section>
+
+        <!-- SECCIÓN PEDIDOS -->
+        <section class="admin-module admin-module-red">
+
+            <div class="admin-module-icon">
+                <i class="bi bi-bag-check"></i>
+            </div>
+
+            <div class="admin-module-content">
+                <span class="admin-module-label">
+                    Ventas
+                </span>
+
+                <h2>Pedidos pendientes</h2>
+
+                <p>
+                    Revisa los pedidos realizados por los clientes, confirma
+                    pagos y actualiza las entregas.
+                </p>
+
+                <a href="/admin/pedidos"
+                   class="admin-module-link">
+                    Gestionar pedidos
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+
+            <div class="admin-module-number">
+                <span>{{ pedidos_pendientes }}</span>
+                <small>Pendientes</small>
+            </div>
+
+        </section>
+
+        <!-- ACCESO A PUBLICACIONES -->
+        <section class="admin-publication-banner">
+
+            <div>
+                <span class="admin-small-title">
+                    Comunidad Huancayoga
+                </span>
+
+                <h2>Publicaciones y monólogos</h2>
+
+                <p>
+                    Comparte mensajes, reflexiones, fotografías y novedades
+                    con los usuarios registrados.
+                </p>
+            </div>
+
+            <a href="/admin/publicaciones"
+               class="btn admin-publication-button">
+                <i class="bi bi-pencil-square"></i>
+                Administrar publicaciones
+            </a>
+
+        </section>
+
+    </main>
 
 </body>
 </html>
