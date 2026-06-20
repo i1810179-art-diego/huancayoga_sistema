@@ -26,6 +26,9 @@ app.config["MAIL_USERNAME"] = os.getenv("MAIL_USERNAME")
 app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PASSWORD")
 app.config["MAIL_DEFAULT_SENDER"] = os.getenv("MAIL_DEFAULT_SENDER")
 
+app.config["MAIL_ENABLED"] = os.getenv("MAIL_ENABLED", "False").lower() == "true"
+app.config["MAIL_TIMEOUT"] = 10
+
 mail = Mail(app)
 
 mysql = MySQL(app)
@@ -34,10 +37,15 @@ mysql = MySQL(app)
 # funciones
 
 def enviar_correo(destinatario, asunto, contenido_html):
-    try:
-        if not destinatario:
-            return False
+    if not destinatario:
+        print("Correo omitido: destinatario vacío.")
+        return False
 
+    if not app.config.get("MAIL_ENABLED", False):
+        print(f"Correo omitido para {destinatario}: MAIL_ENABLED está desactivado.")
+        return False
+
+    try:
         mensaje = Message(
             subject=asunto,
             recipients=[destinatario],
@@ -45,10 +53,11 @@ def enviar_correo(destinatario, asunto, contenido_html):
         )
 
         mail.send(mensaje)
+        print(f"Correo enviado correctamente a {destinatario}")
         return True
 
     except Exception as e:
-        print("Error al enviar correo:", e)
+        print(f"No se pudo enviar correo a {destinatario}: {e}")
         return False
     
 def correo_bienvenida(nombre):
@@ -856,16 +865,17 @@ def cliente_registro():
         session["cliente_dni"] = cliente[1]
         session["cliente_nombre"] = cliente[2]
         
-        enviar_correo(
+        correo_enviado = enviar_correo(
     correo,
     "Bienvenido a Huancayoga 🌿",
     correo_bienvenida(nombres)
 )
+        if correo_enviado:
+            flash("Registro completado correctamente. Te enviamos un correo de bienvenida.", "success")
+        else:
+            flash("Registro completado correctamente.", "success")
 
-        flash("Registro completado correctamente.", "success")
         return redirect(url_for("cliente_dashboard"))
-
-    return render_template("cliente_registro.html", dni_recibido=dni_recibido)
 
 
 @app.route("/cliente/dashboard")
