@@ -16,30 +16,74 @@
 </head>
 <body>
 
-    <!-- NAVBAR -->
-    <nav class="navbar navbar-expand-lg navbar-huancayoga fixed-top">
-        <div class="container">
-            <a class="navbar-brand fw-bold" href="/">Huancayoga</a>
+<!-- NAVBAR -->
+<nav class="navbar navbar-expand-lg navbar-huancayoga fixed-top">
+    <div class="container">
 
-            <div class="d-flex flex-wrap gap-2">
-                <a href="/" class="btn btn-menu">Inicio</a>
-                <a href="/reservar" class="btn btn-menu">Reservar cita</a>
-                <a href="/productos" class="btn btn-menu">Productos</a>
-                <a href="/publicaciones" class="btn btn-menu">Publicaciones</a>
+        <!-- LOGO / NOMBRE -->
+        <a class="navbar-brand fw-bold text-white" href="/">
+            Huancayoga
+        </a>
+
+        <!-- BOTÓN RESPONSIVE -->
+        <button
+            class="navbar-toggler"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#navbarHuancayoga"
+            aria-controls="navbarHuancayoga"
+            aria-expanded="false"
+            aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <!-- MENÚ -->
+        <div class="collapse navbar-collapse" id="navbarHuancayoga">
+            <div class="ms-auto d-flex flex-wrap gap-2">
+
+                <a href="/" class="btn btn-menu">
+                    Inicio
+                </a>
 
                 {% if session.get("cliente_id") %}
-                    <a href="/cliente/dashboard" class="btn btn-menu-cliente">Mi cuenta</a>
-                    <a href="/cliente/logout" class="btn btn-danger btn-sm">Salir</a>
+
+                    <a href="/cliente/dashboard" class="btn btn-menu">
+                        Mi cuenta
+                    </a>
+
+                    <a href="/reservar" class="btn btn-menu">
+                        Reservar cita
+                    </a>
+
+                    <a href="/productos" class="btn btn-menu">
+                        Productos
+                    </a>
+
+                    <a href="/publicaciones" class="btn btn-menu">
+                        Publicaciones
+                    </a>
+
+                    <a href="/cliente/logout" class="btn btn-danger btn-sm">
+                        Cerrar sesión
+                    </a>
+
                 {% else %}
-                    <a href="/cliente/login" class="btn btn-menu-cliente">Ingresar</a>
-                    <a href="/cliente/registro" class="btn btn-registrarse">Registrarse</a>
+
+                    <a href="/cliente/login" class="btn btn-menu">
+                        Ingresar
+                    </a>
+
+                    <a href="/cliente/registro" class="btn btn-registrarse">
+                        Registrarse
+                    </a>
+
                 {% endif %}
 
-                <a href="/admin/login" class="btn btn-admin">Admin</a>
             </div>
         </div>
-    </nav>
 
+    </div>
+</nav>
     <!-- HERO PRINCIPAL -->
     <section class="hero-principal">
         <div class="hero-capa">

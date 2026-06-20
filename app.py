@@ -1351,6 +1351,14 @@ def publicaciones_publicas():
         publicaciones=publicaciones
     )
 
+# ==========================
+# ACCESO CORTO PARA LA DUEÑA
+# ==========================
+
+@app.route("/duena")
+def acceso_duena():
+    return redirect(url_for("admin_login"))
+
 
 if __name__ == "__main__":
     app.run(debug=True)
