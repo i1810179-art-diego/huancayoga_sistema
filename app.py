@@ -864,18 +864,30 @@ def cliente_registro():
         session["cliente_id"] = cliente[0]
         session["cliente_dni"] = cliente[1]
         session["cliente_nombre"] = cliente[2]
-        
+
         correo_enviado = enviar_correo(
-    correo,
-    "Bienvenido a Huancayoga 🌿",
-    correo_bienvenida(nombres)
-)
+            correo,
+            "Bienvenido a Huancayoga 🌿",
+            correo_bienvenida(nombres)
+        )
+
         if correo_enviado:
-            flash("Registro completado correctamente. Te enviamos un correo de bienvenida.", "success")
+            flash(
+                "Registro completado correctamente. Te enviamos un correo de bienvenida.",
+                "success"
+            )
         else:
-            flash("Registro completado correctamente.", "success")
+            flash(
+                "Registro completado correctamente.",
+                "success"
+            )
 
         return redirect(url_for("cliente_dashboard"))
+
+    return render_template(
+        "cliente_registro.html",
+        dni_recibido=dni_recibido
+    )
 
 
 @app.route("/cliente/dashboard")
