@@ -27,6 +27,8 @@ app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PASSWORD")
 app.config["MAIL_DEFAULT_SENDER"] = os.getenv("MAIL_DEFAULT_SENDER")
 
 app.config["MAIL_ENABLED"] = os.getenv("MAIL_ENABLED", "False").lower() == "true"
+app.config["EMAIL_PROVIDER"] = os.getenv("EMAIL_PROVIDER", "brevo")
+app.config["BREVO_API_KEY"] = os.getenv("BREVO_API_KEY")
 app.config["MAIL_TIMEOUT"] = 10
 
 mail = Mail(app)
@@ -45,19 +47,57 @@ def enviar_correo(destinatario, asunto, contenido_html):
         print(f"Correo omitido para {destinatario}: MAIL_ENABLED está desactivado.")
         return False
 
+    if app.config.get("EMAIL_PROVIDER") != "brevo":
+        print("Proveedor de correo no configurado como Brevo.")
+        return False
+
+    api_key = app.config.get("BREVO_API_KEY")
+
+    if not api_key:
+        print("No se encontró BREVO_API_KEY.")
+        return False
+
+    url = "https://api.brevo.com/v3/smtp/email"
+
+    payload = {
+       "sender": {
+                "name": "Huancayoga",
+                "email": "contacto@huancayoga.dpdns.org"
+            },
+        "to": [
+            {
+                "email": destinatario
+            }
+        ],
+        "subject": asunto,
+        "htmlContent": contenido_html
+    }
+
+    headers = {
+        "accept": "application/json",
+        "api-key": api_key,
+        "content-type": "application/json"
+    }
+
     try:
-        mensaje = Message(
-            subject=asunto,
-            recipients=[destinatario],
-            html=contenido_html
+        respuesta = requests.post(
+            url,
+            json=payload,
+            headers=headers,
+            timeout=15
         )
 
-        mail.send(mensaje)
-        print(f"Correo enviado correctamente a {destinatario}")
-        return True
+        if respuesta.status_code in [200, 201, 202]:
+            print(f"Correo enviado correctamente con Brevo a {destinatario}")
+            return True
+
+        print("Brevo no pudo enviar el correo.")
+        print("Status:", respuesta.status_code)
+        print("Respuesta:", respuesta.text)
+        return False
 
     except Exception as e:
-        print(f"No se pudo enviar correo a {destinatario}: {e}")
+        print(f"Error al enviar correo con Brevo: {e}")
         return False
     
 def correo_bienvenida(nombre):
