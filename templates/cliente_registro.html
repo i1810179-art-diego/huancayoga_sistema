@@ -43,52 +43,152 @@
                     {% endif %}
                 {% endwith %}
 
-                <form method="POST" action="/cliente/registro">
+                <form method="POST">
 
-                    <div class="mb-3">
-                        <label class="form-label">DNI</label>
-                        <input type="text" name="dni" class="form-control" maxlength="8" value="{{ dni_recibido }}" required>
-                    </div>
+    <label>DNI</label>
+    <div class="input-group mb-3">
+        <input
+            type="text"
+            name="dni"
+            id="dni"
+            class="form-control"
+            maxlength="8"
+            required>
 
-                    <div class="mb-3">
-                        <label class="form-label">Nombres</label>
-                        <input type="text" name="nombres" class="form-control" required>
-                    </div>
+        <button
+            type="button"
+            class="btn btn-success"
+            onclick="buscarDNI()">
+            Buscar DNI
+        </button>
+    </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Apellido paterno</label>
-                        <input type="text" name="apellido_paterno" class="form-control" required>
-                    </div>
+    <div id="mensaje-reniec" class="mb-3"></div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Apellido materno</label>
-                        <input type="text" name="apellido_materno" class="form-control" required>
-                    </div>
+    <label>Nombres</label>
+    <input
+        type="text"
+        name="nombres"
+        id="nombres"
+        class="form-control"
+        required
+        readonly>
 
-                    <div class="mb-3">
-                        <label class="form-label">Celular</label>
-                        <input type="text" name="celular" class="form-control" required>
-                    </div>
+    <label class="mt-3">Apellido paterno</label>
+    <input
+        type="text"
+        name="apellido_paterno"
+        id="apellido_paterno"
+        class="form-control"
+        required
+        readonly>
 
-                    <div class="mb-3">
-                        <label class="form-label">Correo electrónico</label>
-                        <input type="email" name="correo" class="form-control">
-                    </div>
+    <label class="mt-3">Apellido materno</label>
+    <input
+        type="text"
+        name="apellido_materno"
+        id="apellido_materno"
+        class="form-control"
+        required
+        readonly>
 
-                    <button type="submit" class="btn btn-success w-100">
-                        Registrarme
-                    </button>
+    <label class="mt-3">Celular</label>
+    <input
+        type="text"
+        name="celular"
+        class="form-control"
+        required>
 
-                    <a href="/cliente/login" class="btn btn-outline-secondary w-100 mt-2">
-                        Ya tengo cuenta
-                    </a>
+    <label class="mt-3">Correo electrónico</label>
+    <input
+        type="email"
+        name="correo"
+        class="form-control"
+        required>
 
-                </form>
+    <label class="mt-3">Contraseña</label>
+    <input
+        type="password"
+        name="password"
+        class="form-control"
+        required
+        minlength="6">
+
+    <label class="mt-3">Confirmar contraseña</label>
+    <input
+        type="password"
+        name="confirmar_password"
+        class="form-control"
+        required
+        minlength="6">
+
+    <button
+        type="submit"
+        class="btn btn-success w-100 mt-4">
+        Registrarme
+    </button>
+
+    <a
+        href="/cliente/login"
+        class="btn btn-outline-secondary w-100 mt-2">
+        Ya tengo cuenta
+    </a>
+
+</form>
             </div>
 
         </div>
     </div>
 </section>
+<script>
+function buscarDNI() {
+    const dni = document.getElementById("dni").value.trim();
+    const mensaje = document.getElementById("mensaje-reniec");
 
+    if (dni.length !== 8) {
+        mensaje.innerHTML = `
+            <div class="alert alert-warning">
+                Ingresa un DNI válido de 8 dígitos.
+            </div>
+        `;
+        return;
+    }
+
+    mensaje.innerHTML = `
+        <div class="alert alert-info">
+            Buscando datos en RENIEC...
+        </div>
+    `;
+
+    fetch(`/api/reniec/${dni}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.ok) {
+                document.getElementById("nombres").value = data.nombres;
+                document.getElementById("apellido_paterno").value = data.apellido_paterno;
+                document.getElementById("apellido_materno").value = data.apellido_materno;
+
+                mensaje.innerHTML = `
+                    <div class="alert alert-success">
+                        Datos encontrados correctamente.
+                    </div>
+                `;
+            } else {
+                mensaje.innerHTML = `
+                    <div class="alert alert-danger">
+                        ${data.mensaje}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            mensaje.innerHTML = `
+                <div class="alert alert-danger">
+                    Error al consultar RENIEC.
+                </div>
+            `;
+        });
+}
+</script>
 </body>
 </html>

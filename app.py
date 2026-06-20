@@ -1,9 +1,13 @@
 from flask import Flask, render_template, request, redirect, url_for, flash,session
 from flask_mysqldb import MySQL
+from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from flask_mail import Mail, Message
 import os
 import requests
+import secrets
+
 
 load_dotenv()
 
@@ -37,6 +41,41 @@ mysql = MySQL(app)
 
 
 # funciones
+def correo_recuperar_password(nombre, enlace):
+    return f"""
+    <div style="font-family: Arial, sans-serif; background-color:#f6f2ea; padding:30px;">
+        <div style="max-width:600px; margin:auto; background:white; padding:30px; border-radius:18px;">
+            <h2 style="color:#0b8f5a;">Recupera tu contraseña</h2>
+
+            <p>Hola {nombre},</p>
+
+            <p>
+                Recibimos una solicitud para restablecer tu contraseña
+                en el sistema de Huancayoga.
+            </p>
+
+            <p>
+                Haz clic en el siguiente botón para crear una nueva contraseña:
+            </p>
+
+            <p style="text-align:center; margin:30px 0;">
+                <a href="{enlace}"
+                   style="background:#0b8f5a; color:white; padding:14px 24px;
+                          text-decoration:none; border-radius:10px;">
+                    Restablecer contraseña
+                </a>
+            </p>
+
+            <p>
+                Este enlace vencerá en 30 minutos.
+            </p>
+
+            <p style="color:#777;">
+                Si tú no solicitaste este cambio, puedes ignorar este mensaje.
+            </p>
+        </div>
+    </div>
+    """
 
 def enviar_correo(destinatario, asunto, contenido_html):
     if not destinatario:
@@ -830,46 +869,84 @@ def admin_productos():
 def cliente_login():
     if request.method == "POST":
         dni = request.form["dni"]
+        password = request.form["password"]
 
         cur = mysql.connection.cursor()
+
         cur.execute("""
-            SELECT id, dni, nombres, apellido_paterno, apellido_materno
+            SELECT
+                id,
+                dni,
+                nombres,
+                password_hash,
+                estado
             FROM clientes
-            WHERE dni = %s AND estado = 'activo'
+            WHERE dni = %s
         """, (dni,))
 
         cliente = cur.fetchone()
         cur.close()
 
-        if cliente:
-            session["cliente_id"] = cliente[0]
-            session["cliente_dni"] = cliente[1]
-            session["cliente_nombre"] = cliente[2]
+        if cliente is None:
+            flash("El DNI no está registrado.", "danger")
+            return redirect(url_for("cliente_login"))
 
-            flash("Bienvenido a Huancayoga.", "success")
-            return redirect(url_for("cliente_dashboard"))
-        else:
-            flash("DNI no registrado. Primero debes registrarte.", "warning")
-            return redirect(url_for("cliente_registro", dni=dni))
+        if cliente[4] != "activo":
+            flash("Tu cuenta no está activa.", "warning")
+            return redirect(url_for("cliente_login"))
+
+        if cliente[3] is None:
+            flash("Tu cuenta no tiene contraseña registrada. Regístrate nuevamente o recupera tu contraseña.", "warning")
+            return redirect(url_for("cliente_login"))
+
+        if not check_password_hash(cliente[3], password):
+            flash("La contraseña es incorrecta.", "danger")
+            return redirect(url_for("cliente_login"))
+
+        session["cliente_id"] = cliente[0]
+        session["cliente_dni"] = cliente[1]
+        session["cliente_nombre"] = cliente[2]
+
+        flash("Bienvenido a Huancayoga.", "success")
+        return redirect(url_for("cliente_dashboard"))
 
     return render_template("cliente_login.html")
-
 
 @app.route("/cliente/registro", methods=["GET", "POST"])
 def cliente_registro():
     dni_recibido = request.args.get("dni", "")
 
     if request.method == "POST":
-        dni = request.form["dni"]
-        nombres = request.form["nombres"]
-        apellido_paterno = request.form["apellido_paterno"]
-        apellido_materno = request.form["apellido_materno"]
-        celular = request.form["celular"]
-        correo = request.form["correo"]
+        dni = request.form["dni"].strip()
+        nombres = request.form["nombres"].strip()
+        apellido_paterno = request.form["apellido_paterno"].strip()
+        apellido_materno = request.form["apellido_materno"].strip()
+        celular = request.form["celular"].strip()
+        correo = request.form["correo"].strip()
+        password = request.form["password"]
+        confirmar_password = request.form["confirmar_password"]
+
+        # Validar contraseñas
+        if password != confirmar_password:
+            flash("Las contraseñas no coinciden.", "danger")
+            return redirect(url_for("cliente_registro"))
+
+        if len(password) < 6:
+            flash("La contraseña debe tener al menos 6 caracteres.", "danger")
+            return redirect(url_for("cliente_registro"))
+
+        # Cifrar contraseña
+        password_hash = generate_password_hash(password)
 
         cur = mysql.connection.cursor()
 
-        cur.execute("SELECT id FROM clientes WHERE dni = %s", (dni,))
+        # Verificar si el DNI ya existe
+        cur.execute("""
+            SELECT id
+            FROM clientes
+            WHERE dni = %s
+        """, (dni,))
+
         existe = cur.fetchone()
 
         if existe:
@@ -877,21 +954,33 @@ def cliente_registro():
             flash("Este DNI ya está registrado. Inicia sesión.", "warning")
             return redirect(url_for("cliente_login"))
 
+        # Registrar cliente con contraseña cifrada
         cur.execute("""
             INSERT INTO clientes
-            (dni, nombres, apellido_paterno, apellido_materno, celular, correo, estado)
-            VALUES (%s, %s, %s, %s, %s, %s, 'activo')
+            (
+                dni,
+                nombres,
+                apellido_paterno,
+                apellido_materno,
+                celular,
+                correo,
+                password_hash,
+                estado
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, 'activo')
         """, (
             dni,
             nombres,
             apellido_paterno,
             apellido_materno,
             celular,
-            correo
+            correo,
+            password_hash
         ))
 
         mysql.connection.commit()
 
+        # Obtener cliente recién registrado
         cur.execute("""
             SELECT id, dni, nombres
             FROM clientes
@@ -901,10 +990,12 @@ def cliente_registro():
         cliente = cur.fetchone()
         cur.close()
 
+        # Crear sesión del cliente
         session["cliente_id"] = cliente[0]
         session["cliente_dni"] = cliente[1]
         session["cliente_nombre"] = cliente[2]
 
+        # Enviar correo de bienvenida
         correo_enviado = enviar_correo(
             correo,
             "Bienvenido a Huancayoga 🌿",
@@ -928,7 +1019,6 @@ def cliente_registro():
         "cliente_registro.html",
         dni_recibido=dni_recibido
     )
-
 
 @app.route("/cliente/dashboard")
 def cliente_dashboard():
@@ -1359,6 +1449,225 @@ def publicaciones_publicas():
 def acceso_duena():
     return redirect(url_for("admin_login"))
 
+
+
+# ==========================
+# API RENIEC / DECOLECTA - BUSCAR DNI
+# ==========================
+
+@app.route("/api/reniec/<dni>")
+def api_reniec(dni):
+    if len(dni) != 8 or not dni.isdigit():
+        return {
+            "ok": False,
+            "mensaje": "El DNI debe tener 8 dígitos."
+        }, 400
+
+    reniec_url = os.getenv("RENIEC_API_URL")
+    reniec_token = os.getenv("RENIEC_API_TOKEN")
+
+    if not reniec_url or not reniec_token:
+        return {
+            "ok": False,
+            "mensaje": "La API RENIEC no está configurada."
+        }, 500
+
+    try:
+        respuesta = requests.get(
+            reniec_url,
+            params={"numero": dni},
+            headers={
+                "Authorization": f"Bearer {reniec_token}",
+                "Accept": "application/json"
+            },
+            timeout=15
+        )
+
+        print("STATUS RENIEC:", respuesta.status_code)
+        print("RESPUESTA RENIEC:", respuesta.text)
+
+        if respuesta.status_code != 200:
+            return {
+                "ok": False,
+                "mensaje": "No se pudo consultar el DNI."
+            }, 400
+
+        data = respuesta.json()
+
+        # Algunos proveedores devuelven los datos dentro de "data"
+        datos = data.get("data", data)
+
+        nombres = (
+            datos.get("nombres")
+            or datos.get("nombre")
+            or ""
+        )
+
+        apellido_paterno = (
+            datos.get("apellido_paterno")
+            or datos.get("apellidoPaterno")
+            or ""
+        )
+
+        apellido_materno = (
+            datos.get("apellido_materno")
+            or datos.get("apellidoMaterno")
+            or ""
+        )
+
+        # Algunos servicios devuelven nombre completo como:
+        # "ROBLES ARRIETA DIEGO PAOLO" o "ROBLES ARRIETA, DIEGO PAOLO"
+        nombre_completo = (
+            datos.get("nombre_completo")
+            or datos.get("nombreCompleto")
+            or datos.get("full_name")
+            or ""
+        )
+
+        if not nombres and nombre_completo:
+            nombre_completo = nombre_completo.replace(",", " ")
+            partes = nombre_completo.split()
+
+            if len(partes) >= 3:
+                apellido_paterno = apellido_paterno or partes[0]
+                apellido_materno = apellido_materno or partes[1]
+                nombres = nombres or " ".join(partes[2:])
+
+        if not nombres:
+            return {
+                "ok": False,
+                "mensaje": "No se encontraron datos para este DNI."
+            }, 404
+
+        return {
+            "ok": True,
+            "dni": dni,
+            "nombres": nombres,
+            "apellido_paterno": apellido_paterno,
+            "apellido_materno": apellido_materno
+        }
+
+    except Exception as e:
+        print("Error RENIEC:", e)
+        return {
+            "ok": False,
+            "mensaje": "Error al consultar RENIEC."
+        }, 500
+    
+@app.route("/cliente/recuperar", methods=["GET", "POST"])
+def cliente_recuperar():
+    if request.method == "POST":
+        correo = request.form["correo"].strip()
+
+        cur = mysql.connection.cursor()
+
+        cur.execute("""
+            SELECT id, nombres, correo
+            FROM clientes
+            WHERE correo = %s
+        """, (correo,))
+
+        cliente = cur.fetchone()
+
+        if cliente is None:
+            cur.close()
+            flash("No encontramos una cuenta con ese correo.", "warning")
+            return redirect(url_for("cliente_recuperar"))
+
+        token = secrets.token_urlsafe(32)
+        expira = datetime.now() + timedelta(minutes=30)
+
+        cur.execute("""
+            UPDATE clientes
+            SET reset_token = %s,
+                reset_token_expira = %s
+            WHERE id = %s
+        """, (
+            token,
+            expira,
+            cliente[0]
+        ))
+
+        mysql.connection.commit()
+        cur.close()
+
+        enlace = url_for(
+            "cliente_restablecer",
+            token=token,
+            _external=True
+        )
+
+        enviar_correo(
+            cliente[2],
+            "Recupera tu contraseña - Huancayoga",
+            correo_recuperar_password(cliente[1], enlace)
+        )
+
+        flash(
+            "Te enviamos un enlace para recuperar tu contraseña.",
+            "success"
+        )
+        return redirect(url_for("cliente_login"))
+
+    return render_template("cliente_recuperar.html")
+
+@app.route("/cliente/restablecer/<token>", methods=["GET", "POST"])
+def cliente_restablecer(token):
+    cur = mysql.connection.cursor()
+
+    cur.execute("""
+        SELECT id, nombres, reset_token_expira
+        FROM clientes
+        WHERE reset_token = %s
+    """, (token,))
+
+    cliente = cur.fetchone()
+
+    if cliente is None:
+        cur.close()
+        flash("El enlace no es válido.", "danger")
+        return redirect(url_for("cliente_login"))
+
+    if cliente[2] < datetime.now():
+        cur.close()
+        flash("El enlace ha expirado. Solicita uno nuevo.", "warning")
+        return redirect(url_for("cliente_recuperar"))
+
+    if request.method == "POST":
+        password = request.form["password"]
+        confirmar_password = request.form["confirmar_password"]
+
+        if password != confirmar_password:
+            cur.close()
+            flash("Las contraseñas no coinciden.", "danger")
+            return redirect(url_for("cliente_restablecer", token=token))
+
+        if len(password) < 6:
+            cur.close()
+            flash("La contraseña debe tener al menos 6 caracteres.", "danger")
+            return redirect(url_for("cliente_restablecer", token=token))
+
+        password_hash = generate_password_hash(password)
+
+        cur.execute("""
+            UPDATE clientes
+            SET password_hash = %s,
+                reset_token = NULL,
+                reset_token_expira = NULL
+            WHERE id = %s
+        """, (
+            password_hash,
+            cliente[0]
+        ))
+
+        mysql.connection.commit()
+        cur.close()
+
+        flash("Tu contraseña fue actualizada correctamente.", "success")
+        return redirect(url_for("cliente_login"))
+
+    cur.close()
+    return render_template("cliente_restablecer.html")
 
 if __name__ == "__main__":
     app.run(debug=True)
