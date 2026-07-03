@@ -1669,5 +1669,153 @@ def cliente_restablecer(token):
     cur.close()
     return render_template("cliente_restablecer.html")
 
+# ==================================================
+# CHATBOT HUANCAYOGA - PRIMERA VERSIÓN LOCAL
+# ==================================================
+
+def obtener_respuesta_chatbot(mensaje):
+    texto = mensaje.lower().strip()
+
+    # Saludo
+    if any(palabra in texto for palabra in [
+        "hola", "buenos días", "buenas tardes", "buenas noches"
+    ]):
+        return {
+            "respuesta": (
+                "¡Hola! 🌿 Soy el asistente virtual de Huancayoga. "
+                "Puedo ayudarte con reservas, citas, productos, pedidos, "
+                "horarios y servicios de yoga."
+            ),
+            "boton_texto": None,
+            "boton_url": None
+        }
+
+    # Reservar
+    if any(palabra in texto for palabra in [
+        "reservar", "reserva", "agendar", "cita", "inscribirme"
+    ]):
+        return {
+            "respuesta": (
+                "Para reservar una sesión, entra a la sección Reservar. "
+                "Ahí podrás seleccionar el servicio, la fecha y la hora disponible."
+            ),
+            "boton_texto": "Reservar una cita",
+            "boton_url": "/reservar"
+        }
+
+    # Consultar citas
+    if any(frase in texto for frase in [
+        "mis citas", "ver citas", "consultar citas", "próxima cita"
+    ]):
+        return {
+            "respuesta": (
+                "Puedes consultar tus citas registradas y revisar su estado "
+                "desde la sección Mis citas."
+            ),
+            "boton_texto": "Ver mis citas",
+            "boton_url": "/cliente/mis-citas"
+        }
+
+    # Productos
+    if any(palabra in texto for palabra in [
+        "producto", "productos", "comprar", "precio", "aceite",
+        "incienso", "mat", "bloque", "botella"
+    ]):
+        return {
+            "respuesta": (
+                "Puedes revisar los productos disponibles de Huancayoga, "
+                "sus precios y características desde el catálogo."
+            ),
+            "boton_texto": "Ver productos",
+            "boton_url": "/productos"
+        }
+
+    # Pedidos
+    if any(frase in texto for frase in [
+        "mis pedidos", "ver pedidos", "pedido", "estado de mi pedido"
+    ]):
+        return {
+            "respuesta": (
+                "Puedes consultar los productos solicitados y el estado "
+                "de tus compras desde la sección Mis pedidos."
+            ),
+            "boton_texto": "Ver mis pedidos",
+            "boton_url": "/cliente/mis-pedidos"
+        }
+
+    # Perfil
+    if any(frase in texto for frase in [
+        "mi perfil", "mis datos", "datos personales", "cambiar mis datos"
+    ]):
+        return {
+            "respuesta": (
+                "Desde Mi perfil puedes revisar y actualizar tus datos personales."
+            ),
+            "boton_texto": "Ir a mi perfil",
+            "boton_url": "/cliente/perfil"
+        }
+
+    # Horarios
+    if any(palabra in texto for palabra in [
+        "horario", "horarios", "hora", "atienden", "disponibilidad"
+    ]):
+        return {
+            "respuesta": (
+                "Los horarios dependen de la disponibilidad de las sesiones. "
+                "Puedes ingresar a Reservar para consultar las fechas y horas disponibles."
+            ),
+            "boton_texto": "Consultar horarios",
+            "boton_url": "/reservar"
+        }
+
+    # Recomendación básica
+    if any(palabra in texto for palabra in [
+        "estrés", "estres", "relajarme", "ansiedad",
+        "espalda", "principiante", "meditación", "meditacion"
+    ]):
+        return {
+            "respuesta": (
+                "Para relajación y reducción del estrés podrías considerar "
+                "una sesión de respiración, meditación o yoga suave. "
+                "La instructora podrá orientarte según tu condición y experiencia."
+            ),
+            "boton_texto": "Reservar orientación",
+            "boton_url": "/reservar"
+        }
+
+    # Pregunta desconocida
+    return {
+        "respuesta": (
+            "Todavía no comprendí completamente tu pregunta. 🌿 "
+            "Puedes preguntarme cómo reservar, consultar citas, ver productos, "
+            "revisar pedidos, horarios o servicios de yoga."
+        ),
+        "boton_texto": None,
+        "boton_url": None
+    }
+
+
+@app.route("/api/chatbot", methods=["POST"])
+def api_chatbot():
+    datos = request.get_json(silent=True) or {}
+    mensaje = datos.get("mensaje", "").strip()
+
+    if not mensaje:
+        return {
+            "ok": False,
+            "respuesta": "Escribe una pregunta para poder ayudarte.",
+            "boton_texto": None,
+            "boton_url": None
+        }, 400
+
+    resultado = obtener_respuesta_chatbot(mensaje)
+
+    return {
+        "ok": True,
+        "respuesta": resultado["respuesta"],
+        "boton_texto": resultado["boton_texto"],
+        "boton_url": resultado["boton_url"]
+    }
+
 if __name__ == "__main__":
     app.run(debug=True)

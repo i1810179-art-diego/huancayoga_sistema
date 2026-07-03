@@ -297,6 +297,205 @@
     {% endif %}
 
 </main>
+<!-- ==================================================
+     CHATBOT FLOTANTE HUANCAYOGA
+================================================== -->
 
+<!-- Burbuja -->
+<button
+    type="button"
+    id="boton-chatbot-yoga"
+    onclick="abrirChatbotYoga()"
+    title="Abrir asistente Huancayoga"
+    aria-label="Abrir asistente Huancayoga">
+
+    <span class="chatbot-icono-yoga">🧘</span>
+    <span class="chatbot-burbuja-texto">Asistente</span>
+</button>
+
+<!-- Ventana del chatbot -->
+<section id="chatbot-yoga-caja" aria-label="Asistente Huancayoga">
+
+    <header class="chatbot-yoga-header">
+        <div class="chatbot-yoga-titulo">
+            <span class="chatbot-header-icono">🧘</span>
+
+            <div>
+                <strong>Huancayoga Bot</strong>
+                <small>En línea</small>
+            </div>
+        </div>
+
+        <button
+            type="button"
+            class="chatbot-cerrar"
+            onclick="cerrarChatbotYoga()"
+            aria-label="Cerrar asistente">
+            ×
+        </button>
+    </header>
+
+    <div id="chatbot-yoga-mensajes">
+
+        <div class="mensaje-chatbot mensaje-bot-yoga">
+            ¡Hola! Bienvenido a Huancayoga 🌿 Soy tu asistente virtual.
+            Puedes preguntarme sobre reservas, productos, pedidos, horarios
+            o servicios de yoga.
+        </div>
+
+    </div>
+
+    <footer class="chatbot-yoga-input">
+
+        <input
+            type="text"
+            id="chatbot-yoga-texto"
+            placeholder="Escribe un mensaje..."
+            autocomplete="off">
+
+        <button
+            type="button"
+            id="chatbot-yoga-enviar"
+            onclick="enviarMensajeYoga()">
+            ➤
+        </button>
+
+    </footer>
+
+</section>
+
+<script>
+function abrirChatbotYoga() {
+    const caja = document.getElementById("chatbot-yoga-caja");
+    const burbuja = document.getElementById("boton-chatbot-yoga");
+    const input = document.getElementById("chatbot-yoga-texto");
+
+    caja.classList.add("chatbot-visible");
+    burbuja.style.display = "none";
+
+    setTimeout(() => input.focus(), 150);
+}
+
+function cerrarChatbotYoga() {
+    const caja = document.getElementById("chatbot-yoga-caja");
+    const burbuja = document.getElementById("boton-chatbot-yoga");
+
+    caja.classList.remove("chatbot-visible");
+    burbuja.style.display = "flex";
+}
+
+function agregarMensajeYoga(
+    texto,
+    tipo,
+    botonTexto = null,
+    botonUrl = null
+) {
+    const contenedor = document.getElementById("chatbot-yoga-mensajes");
+    const mensaje = document.createElement("div");
+
+    mensaje.classList.add("mensaje-chatbot");
+
+    if (tipo === "usuario") {
+        mensaje.classList.add("mensaje-usuario-yoga");
+        mensaje.textContent = texto;
+    } else {
+        mensaje.classList.add("mensaje-bot-yoga");
+
+        const contenido = document.createElement("div");
+        contenido.textContent = texto;
+        mensaje.appendChild(contenido);
+
+        if (botonTexto && botonUrl) {
+            const boton = document.createElement("a");
+
+            boton.href = botonUrl;
+            boton.className = "boton-accion-chatbot";
+            boton.textContent = botonTexto;
+
+            mensaje.appendChild(boton);
+        }
+    }
+
+    contenedor.appendChild(mensaje);
+    contenedor.scrollTop = contenedor.scrollHeight;
+
+    return mensaje;
+}
+
+async function enviarMensajeYoga() {
+    const input = document.getElementById("chatbot-yoga-texto");
+    const botonEnviar = document.getElementById("chatbot-yoga-enviar");
+    const mensaje = input.value.trim();
+
+    if (!mensaje) {
+        return;
+    }
+
+    agregarMensajeYoga(mensaje, "usuario");
+
+    input.value = "";
+    botonEnviar.disabled = true;
+
+    const mensajeEscribiendo = agregarMensajeYoga(
+        "Escribiendo...",
+        "bot"
+    );
+
+    try {
+        const respuestaHttp = await fetch("/api/chatbot", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                mensaje: mensaje
+            })
+        });
+
+        const datos = await respuestaHttp.json();
+
+        mensajeEscribiendo.remove();
+
+        if (!respuestaHttp.ok || !datos.ok) {
+            agregarMensajeYoga(
+                datos.respuesta || "No pude responder en este momento.",
+                "bot"
+            );
+
+            return;
+        }
+
+        agregarMensajeYoga(
+            datos.respuesta,
+            "bot",
+            datos.boton_texto,
+            datos.boton_url
+        );
+
+    } catch (error) {
+        mensajeEscribiendo.remove();
+
+        agregarMensajeYoga(
+            "No pude conectarme con el asistente. Inténtalo nuevamente.",
+            "bot"
+        );
+
+        console.error("Error del chatbot:", error);
+
+    } finally {
+        botonEnviar.disabled = false;
+        input.focus();
+    }
+}
+
+document
+    .getElementById("chatbot-yoga-texto")
+    .addEventListener("keydown", function(evento) {
+        if (evento.key === "Enter") {
+            evento.preventDefault();
+            enviarMensajeYoga();
+        }
+    });
+</script>
 </body>
 </html>
