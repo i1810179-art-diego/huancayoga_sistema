@@ -7,6 +7,7 @@ from flask_mail import Mail, Message
 import os
 import requests
 import secrets
+import json
 
 
 load_dotenv()
@@ -34,6 +35,12 @@ app.config["MAIL_ENABLED"] = os.getenv("MAIL_ENABLED", "False").lower() == "true
 app.config["EMAIL_PROVIDER"] = os.getenv("EMAIL_PROVIDER", "brevo")
 app.config["BREVO_API_KEY"] = os.getenv("BREVO_API_KEY")
 app.config["MAIL_TIMEOUT"] = 10
+
+# Configuracion del chatbot con IA
+app.config["CHATBOT_PROVIDER"] = os.getenv("CHATBOT_PROVIDER", "local").lower()
+app.config["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+app.config["OPENAI_MODEL"] = os.getenv("OPENAI_MODEL", "gpt-5.4-mini")
+app.config["OPENAI_TIMEOUT"] = int(os.getenv("OPENAI_TIMEOUT", 20))
 
 mail = Mail(app)
 
@@ -1673,8 +1680,25 @@ def cliente_restablecer(token):
 # CHATBOT HUANCAYOGA - PRIMERA VERSIÓN LOCAL
 # ==================================================
 
-def obtener_respuesta_chatbot(mensaje):
+def obtener_respuesta_chatbot_local(mensaje):
     texto = mensaje.lower().strip()
+
+    # Informacion tecnica del servicio de IA
+    if any(frase in texto for frase in [
+        "servicio ia", "servicio de ia", "inteligencia artificial",
+        "openai", "api", "modelo de ia", "de donde viene tu ia",
+        "de dónde viene tu ia"
+    ]):
+        return {
+            "respuesta": (
+                "Mi servicio de inteligencia artificial esta integrado con la API de OpenAI "
+                "desde el backend del sistema Huancayoga. El navegador envia tu mensaje a Flask, "
+                "Flask consulta OpenAI usando una clave privada guardada en variables de entorno "
+                "y luego devuelve la respuesta al chatbot."
+            ),
+            "boton_texto": None,
+            "boton_url": None
+        }
 
     # Saludo
     if any(palabra in texto for palabra in [
@@ -1793,6 +1817,246 @@ def obtener_respuesta_chatbot(mensaje):
         "boton_texto": None,
         "boton_url": None
     }
+
+
+RUTAS_CHATBOT_PERMITIDAS = {
+    "/reservar": "Reservar una cita",
+    "/productos": "Ver productos",
+    "/cliente/mis-citas": "Ver mis citas",
+    "/cliente/mis-pedidos": "Ver mis pedidos",
+    "/cliente/perfil": "Ir a mi perfil",
+    "/publicaciones": "Ver publicaciones"
+}
+
+
+def obtener_contexto_chatbot():
+    contexto = [
+        "Huancayoga es un sistema web de reservas, productos, pedidos y publicaciones de bienestar.",
+        "El cliente puede reservar citas, revisar sus citas, comprar productos, ver pedidos y leer publicaciones.",
+        "Si falta informacion exacta, orienta al cliente a la seccion correcta del sistema."
+    ]
+
+    try:
+        cur = mysql.connection.cursor()
+
+        cur.execute("""
+            SELECT nombre, precio
+            FROM servicios
+            WHERE estado = 'activo'
+            ORDER BY nombre ASC
+            LIMIT 8
+        """)
+        servicios = cur.fetchall()
+
+        if servicios:
+            servicios_texto = ", ".join(
+                f"{servicio[0]} (S/ {servicio[1]})"
+                for servicio in servicios
+            )
+            contexto.append(f"Servicios activos: {servicios_texto}.")
+
+        cur.execute("""
+            SELECT nombre, precio, stock
+            FROM productos
+            WHERE estado = 'activo'
+            ORDER BY nombre ASC
+            LIMIT 8
+        """)
+        productos = cur.fetchall()
+
+        if productos:
+            productos_texto = ", ".join(
+                f"{producto[0]} (S/ {producto[1]}, stock {producto[2]})"
+                for producto in productos
+            )
+            contexto.append(f"Productos activos: {productos_texto}.")
+
+        if "cliente_id" in session:
+            cliente_id = session["cliente_id"]
+
+            cur.execute("""
+                SELECT nombres
+                FROM clientes
+                WHERE id = %s
+            """, (cliente_id,))
+            cliente = cur.fetchone()
+
+            if cliente:
+                contexto.append(f"Cliente conectado: {cliente[0]}.")
+
+            cur.execute("""
+                SELECT s.nombre, r.fecha, r.hora, r.estado
+                FROM reservas r
+                INNER JOIN servicios s ON r.servicio_id = s.id
+                WHERE r.cliente_id = %s
+                AND r.fecha >= CURDATE()
+                AND r.estado IN ('pendiente', 'confirmada')
+                ORDER BY r.fecha ASC, r.hora ASC
+                LIMIT 1
+            """, (cliente_id,))
+            proxima_cita = cur.fetchone()
+
+            if proxima_cita:
+                contexto.append(
+                    "Proxima cita del cliente: "
+                    f"{proxima_cita[0]} el {proxima_cita[1]} "
+                    f"a las {proxima_cita[2]}, estado {proxima_cita[3]}."
+                )
+
+            cur.execute("""
+                SELECT COUNT(*)
+                FROM pedidos
+                WHERE cliente_id = %s
+            """, (cliente_id,))
+            total_pedidos = cur.fetchone()[0]
+            contexto.append(f"Total de pedidos del cliente: {total_pedidos}.")
+
+        cur.close()
+
+    except Exception as e:
+        print(f"No se pudo construir el contexto del chatbot: {e}")
+
+    return "\n".join(contexto)
+
+
+def extraer_texto_openai(data):
+    if isinstance(data.get("output_text"), str):
+        return data["output_text"].strip()
+
+    textos = []
+
+    for item in data.get("output", []):
+        for contenido in item.get("content", []):
+            texto = contenido.get("text")
+
+            if isinstance(texto, str):
+                textos.append(texto)
+
+    return "\n".join(textos).strip()
+
+
+def normalizar_respuesta_ia(texto, mensaje_original):
+    texto = texto.strip()
+
+    if texto.startswith("```"):
+        texto = texto.strip("`").strip()
+        if texto.lower().startswith("json"):
+            texto = texto[4:].strip()
+
+    try:
+        data = json.loads(texto)
+        respuesta = str(data.get("respuesta", "")).strip()
+        boton_texto = data.get("boton_texto")
+        boton_url = data.get("boton_url")
+    except Exception:
+        respuesta = texto
+        boton_texto = None
+        boton_url = None
+
+    if not respuesta:
+        respuesta = obtener_respuesta_chatbot_local(mensaje_original)["respuesta"]
+
+    if boton_url not in RUTAS_CHATBOT_PERMITIDAS:
+        fallback = obtener_respuesta_chatbot_local(mensaje_original)
+        boton_texto = fallback.get("boton_texto")
+        boton_url = fallback.get("boton_url")
+
+    if boton_url and not boton_texto:
+        boton_texto = RUTAS_CHATBOT_PERMITIDAS.get(boton_url)
+
+    return {
+        "respuesta": respuesta,
+        "boton_texto": boton_texto,
+        "boton_url": boton_url
+    }
+
+
+def obtener_respuesta_chatbot_openai(mensaje):
+    api_key = app.config.get("OPENAI_API_KEY")
+
+    if not api_key:
+        return None
+
+    instrucciones = """
+Eres Huancayoga Bot, asistente virtual del sistema Huancayoga.
+Responde siempre en espanol, con tono amable, breve y claro.
+
+Puedes ayudar con:
+- reservas de citas y orientacion para elegir servicios
+- consulta general de citas, horarios y disponibilidad
+- productos, precios y stock cuando aparezcan en el contexto
+- pedidos y perfil del cliente
+- publicaciones de inspiracion y bienestar
+- dudas generales de yoga, meditacion, respiracion y relajacion
+- preguntas tecnicas sobre tu propia integracion de IA
+
+Reglas:
+- Si preguntan de donde viene tu servicio de IA, que tecnologia usas, si usas OpenAI,
+  o como estas integrado, responde que usas la API de OpenAI desde el backend Flask
+  del sistema Huancayoga. Explica que el navegador envia el mensaje a Flask,
+  Flask consulta OpenAI con una API key privada guardada en variables de entorno
+  y devuelve la respuesta al chatbot. No digas que tienes ubicacion fisica propia.
+- No inventes precios, stock, fechas, estados de pedidos ni horarios exactos.
+- Si el cliente necesita hacer una accion, recomienda una de estas rutas:
+  /reservar, /productos, /cliente/mis-citas, /cliente/mis-pedidos, /cliente/perfil, /publicaciones.
+- No des diagnosticos medicos. Para dolor fuerte, lesiones o ansiedad intensa, recomienda consultar a un profesional.
+- Devuelve solo JSON valido con esta forma:
+  {"respuesta":"texto para el cliente","boton_texto":"texto opcional","boton_url":"ruta opcional"}
+- Si no hace falta boton, usa null en boton_texto y boton_url.
+"""
+
+    payload = {
+        "model": app.config.get("OPENAI_MODEL", "gpt-5.4-mini"),
+        "instructions": instrucciones,
+        "input": (
+            "Contexto disponible del sistema:\n"
+            f"{obtener_contexto_chatbot()}\n\n"
+            f"Mensaje del cliente: {mensaje}"
+        ),
+        "max_output_tokens": 350
+    }
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+
+    try:
+        respuesta_http = requests.post(
+            "https://api.openai.com/v1/responses",
+            headers=headers,
+            json=payload,
+            timeout=app.config.get("OPENAI_TIMEOUT", 20)
+        )
+
+        if respuesta_http.status_code not in [200, 201]:
+            print("OpenAI chatbot no respondio correctamente.")
+            print("Status:", respuesta_http.status_code)
+            print("Respuesta:", respuesta_http.text[:500])
+            return None
+
+        texto = extraer_texto_openai(respuesta_http.json())
+
+        if not texto:
+            return None
+
+        return normalizar_respuesta_ia(texto, mensaje)
+
+    except Exception as e:
+        print(f"Error al consultar OpenAI para el chatbot: {e}")
+        return None
+
+
+def obtener_respuesta_chatbot(mensaje):
+    provider = app.config.get("CHATBOT_PROVIDER", "local")
+
+    if provider != "local":
+        respuesta_ia = obtener_respuesta_chatbot_openai(mensaje)
+
+        if respuesta_ia:
+            return respuesta_ia
+
+    return obtener_respuesta_chatbot_local(mensaje)
 
 
 @app.route("/api/chatbot", methods=["POST"])
