@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash,session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, abort
 from flask_mysqldb import MySQL
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
@@ -8,6 +8,7 @@ import os
 import requests
 import secrets
 import json
+import html
 
 
 load_dotenv()
@@ -15,6 +16,13 @@ load_dotenv()
 app = Flask(__name__)
 
 app.secret_key = os.getenv("SECRET_KEY","huancayoga_clave_temporal_2026")
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = (
+    os.getenv("SESSION_COOKIE_SECURE", "False").lower() == "true"
+    or bool(os.getenv("RENDER"))
+)
+app.config["APP_DEBUG"] = os.getenv("FLASK_DEBUG", "False").lower() == "true"
 
 # Configuración de MySQL
 app.config["MYSQL_HOST"] = os.getenv("DB_HOST")
@@ -42,9 +50,92 @@ app.config["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 app.config["OPENAI_MODEL"] = os.getenv("OPENAI_MODEL", "gpt-5.4-mini")
 app.config["OPENAI_TIMEOUT"] = int(os.getenv("OPENAI_TIMEOUT", 20))
 
+# Alertas internas opcionales por correo
+app.config["SYSTEM_ALERTS_ENABLED"] = os.getenv("SYSTEM_ALERTS_ENABLED", "False").lower() == "true"
+app.config["SYSTEM_ALERT_EMAIL"] = os.getenv("SYSTEM_ALERT_EMAIL")
+app.config["SYSTEM_ALERT_COOLDOWN_MINUTES"] = int(os.getenv("SYSTEM_ALERT_COOLDOWN_MINUTES", 30))
+
 mail = Mail(app)
 
 mysql = MySQL(app)
+
+ultima_alerta_sistema = {}
+
+
+def generar_csrf_token():
+    if "_csrf_token" not in session:
+        session["_csrf_token"] = secrets.token_urlsafe(32)
+
+    return session["_csrf_token"]
+
+
+@app.context_processor
+def inyectar_csrf_token():
+    return {"csrf_token": generar_csrf_token}
+
+
+def csrf_valido():
+    token_session = session.get("_csrf_token")
+    token_formulario = request.form.get("csrf_token") or request.headers.get("X-CSRFToken")
+
+    return (
+        bool(token_session)
+        and bool(token_formulario)
+        and secrets.compare_digest(token_session, token_formulario)
+    )
+
+
+@app.before_request
+def proteger_post_con_csrf():
+    rutas_excluidas = {"api_chatbot"}
+
+    if request.method == "POST" and request.endpoint not in rutas_excluidas:
+        if not csrf_valido():
+            flash("La solicitud no pudo validarse. Intenta nuevamente.", "danger")
+            return redirect(request.referrer or url_for("index"))
+
+
+def enviar_alerta_sistema(clave, asunto, detalle):
+    if not app.config.get("SYSTEM_ALERTS_ENABLED"):
+        return False
+
+    destinatario = app.config.get("SYSTEM_ALERT_EMAIL")
+
+    if not destinatario:
+        return False
+
+    ahora = datetime.now()
+    cooldown = timedelta(minutes=app.config.get("SYSTEM_ALERT_COOLDOWN_MINUTES", 30))
+    ultima_alerta = ultima_alerta_sistema.get(clave)
+
+    if ultima_alerta and ahora - ultima_alerta < cooldown:
+        return False
+
+    ultima_alerta_sistema[clave] = ahora
+    detalle_seguro = html.escape(str(detalle))
+
+    contenido = f"""
+    <div style="font-family: Arial, sans-serif; background:#faf7f0; padding:24px;">
+        <div style="max-width:640px; margin:auto; background:white; border-radius:12px; padding:24px;">
+            <h2 style="color:#315545;">Alerta del sistema Huancayoga</h2>
+            <p><strong>{html.escape(asunto)}</strong></p>
+            <pre style="white-space:pre-wrap; background:#f4f4f4; padding:12px; border-radius:8px;">{detalle_seguro}</pre>
+        </div>
+    </div>
+    """
+
+    return enviar_correo(destinatario, asunto, contenido)
+
+
+def password_admin_es_hash(password_guardado):
+    return password_guardado.startswith(("scrypt:", "pbkdf2:", "argon2:"))
+
+
+def password_admin_valido(password_guardado, password_ingresado):
+    if password_admin_es_hash(password_guardado):
+        return check_password_hash(password_guardado, password_ingresado)
+
+    return secrets.compare_digest(password_guardado, password_ingresado)
 
 
 # funciones
@@ -301,6 +392,9 @@ def index():
 
 @app.route("/check-db")
 def check_db():
+    if "admin_id" not in session and os.getenv("CHECK_DB_PUBLIC", "False").lower() != "true":
+        abort(404)
+
     try:
         cur = mysql.connection.cursor()
         cur.execute("SELECT DATABASE();")
@@ -612,7 +706,7 @@ def admin_editar_producto(id):
     return render_template("admin/editar_producto.html", producto=producto)
 
 
-@app.route("/admin/productos/eliminar/<int:id>")
+@app.route("/admin/productos/eliminar/<int:id>", methods=["POST"])
 def admin_eliminar_producto(id):
     if "admin_id" not in session:
         flash("Debes iniciar sesión para ingresar al panel.", "warning")
@@ -646,13 +740,25 @@ def admin_login():
         cur.execute("""
             SELECT id, nombre, usuario, password, rol
             FROM usuarios
-            WHERE usuario = %s AND password = %s
-        """, (usuario, password))
+            WHERE usuario = %s
+        """, (usuario,))
 
         admin = cur.fetchone()
-        cur.close()
 
-        if admin:
+        if admin and password_admin_valido(admin[3], password):
+            if not password_admin_es_hash(admin[3]):
+                cur.execute("""
+                    UPDATE usuarios
+                    SET password = %s
+                    WHERE id = %s
+                """, (
+                    generate_password_hash(password),
+                    admin[0]
+                ))
+                mysql.connection.commit()
+
+            cur.close()
+
             session["admin_id"] = admin[0]
             session["admin_nombre"] = admin[1]
             session["admin_usuario"] = admin[2]
@@ -660,9 +766,9 @@ def admin_login():
 
             flash("Bienvenido al panel administrativo.", "success")
             return redirect(url_for("admin_dashboard"))
-        else:
-            flash("Usuario o contraseña incorrectos.", "danger")
-            return redirect(url_for("admin_login"))
+        cur.close()
+        flash("Usuario o contraseña incorrectos.", "danger")
+        return redirect(url_for("admin_login"))
 
     return render_template("login.html")
 
@@ -740,7 +846,7 @@ def admin_reservas():
     return render_template("admin/reservas.html", reservas=reservas)
 
 
-@app.route("/admin/reserva/estado/<int:id>/<estado>")
+@app.route("/admin/reserva/estado/<int:id>/<estado>", methods=["POST"])
 def cambiar_estado_reserva(id, estado):
     if "admin_id" not in session:
         flash("Debes iniciar sesión para ingresar al panel.", "warning")
@@ -823,7 +929,7 @@ def admin_pedidos():
     return render_template("admin/pedidos.html", pedidos=pedidos)
 
 
-@app.route("/admin/pedido/estado/<int:id>/<estado>")
+@app.route("/admin/pedido/estado/<int:id>/<estado>", methods=["POST"])
 def cambiar_estado_pedido(id, estado):
     if "admin_id" not in session:
         flash("Debes iniciar sesión para ingresar al panel.", "warning")
@@ -1240,7 +1346,7 @@ def cliente_logout():
     flash("Sesión de cliente cerrada correctamente.", "success")
     return redirect(url_for("index"))
 
-@app.route("/admin/reserva/recordatorio/<int:id>")
+@app.route("/admin/reserva/recordatorio/<int:id>", methods=["POST"])
 def enviar_recordatorio_reserva(id):
     if "admin_id" not in session:
         flash("Debes iniciar sesión para ingresar al panel.", "warning")
@@ -1411,7 +1517,7 @@ def admin_editar_publicacion(id):
     )
 
 
-@app.route("/admin/publicaciones/eliminar/<int:id>")
+@app.route("/admin/publicaciones/eliminar/<int:id>", methods=["POST"])
 def admin_eliminar_publicacion(id):
     if "admin_id" not in session:
         flash("Debes iniciar sesión para ingresar al panel.", "warning")
@@ -2033,6 +2139,11 @@ Reglas:
             print("OpenAI chatbot no respondio correctamente.")
             print("Status:", respuesta_http.status_code)
             print("Respuesta:", respuesta_http.text[:500])
+            enviar_alerta_sistema(
+                "openai_chatbot_status",
+                "OpenAI no respondio correctamente",
+                f"Status: {respuesta_http.status_code}\nRespuesta: {respuesta_http.text[:500]}"
+            )
             return None
 
         texto = extraer_texto_openai(respuesta_http.json())
@@ -2044,6 +2155,11 @@ Reglas:
 
     except Exception as e:
         print(f"Error al consultar OpenAI para el chatbot: {e}")
+        enviar_alerta_sistema(
+            "openai_chatbot_exception",
+            "Error al consultar OpenAI",
+            str(e)
+        )
         return None
 
 
@@ -2082,4 +2198,4 @@ def api_chatbot():
     }
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=app.config.get("APP_DEBUG", False))

@@ -74,17 +74,33 @@
                                 </td>
                                 <td>{{ p[7] }}</td>
                                 <td>
-                                    <a href="/admin/pedido/estado/{{ p[0] }}/pagado" class="btn btn-success btn-sm mb-1">
-                                        Pagado
-                                    </a>
+                                    <form method="POST"
+                                          action="/admin/pedido/estado/{{ p[0] }}/pagado"
+                                          class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-success btn-sm mb-1">
+                                            Pagado
+                                        </button>
+                                    </form>
 
-                                    <a href="/admin/pedido/estado/{{ p[0] }}/entregado" class="btn btn-primary btn-sm mb-1">
-                                        Entregado
-                                    </a>
+                                    <form method="POST"
+                                          action="/admin/pedido/estado/{{ p[0] }}/entregado"
+                                          class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-primary btn-sm mb-1">
+                                            Entregado
+                                        </button>
+                                    </form>
 
-                                    <a href="/admin/pedido/estado/{{ p[0] }}/cancelado" class="btn btn-danger btn-sm mb-1">
-                                        Cancelar
-                                    </a>
+                                    <form method="POST"
+                                          action="/admin/pedido/estado/{{ p[0] }}/cancelado"
+                                          class="d-inline"
+                                          onsubmit="return confirm('¿Deseas cancelar este pedido?')">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-danger btn-sm mb-1">
+                                            Cancelar
+                                        </button>
+                                    </form>
                                 </td>
                             </tr>
                         {% endfor %}

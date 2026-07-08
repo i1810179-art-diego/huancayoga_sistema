@@ -44,6 +44,7 @@
                 {% endwith %}
 
                 <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
     <label>DNI</label>
     <div class="input-group mb-3">

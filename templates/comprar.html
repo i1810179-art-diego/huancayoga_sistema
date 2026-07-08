@@ -91,6 +91,7 @@
                             </p>
 
                             <form method="POST" action="/comprar/{{ producto[0] }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                                 <div class="mb-3">
                                     <label class="form-label">Nombre completo</label>

@@ -88,11 +88,15 @@
                                         Editar
                                     </a>
 
-                                    <a href="/admin/productos/eliminar/{{ p[0] }}" 
-                                       class="btn btn-danger btn-sm mb-1"
-                                       onclick="return confirm('¿Seguro que deseas desactivar este producto?')">
-                                        Desactivar
-                                    </a>
+                                    <form method="POST"
+                                          action="/admin/productos/eliminar/{{ p[0] }}"
+                                          class="d-inline"
+                                          onsubmit="return confirm('¿Seguro que deseas desactivar este producto?')">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-danger btn-sm mb-1">
+                                            Desactivar
+                                        </button>
+                                    </form>
                                 </td>
                             </tr>
                         {% endfor %}

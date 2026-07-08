@@ -76,20 +76,42 @@
                                     <span class="badge bg-secondary">{{ r[8] }}</span>
                                 </td>
                                 <td>
-                                    <a href="/admin/reserva/estado/{{ r[0] }}/confirmada" class="btn btn-success btn-sm mb-1">
-                                        Confirmar
-                                    </a>
+                                    <form method="POST"
+                                          action="/admin/reserva/estado/{{ r[0] }}/confirmada"
+                                          class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-success btn-sm mb-1">
+                                            Confirmar
+                                        </button>
+                                    </form>
 
-                                    <a href="/admin/reserva/estado/{{ r[0] }}/atendida" class="btn btn-primary btn-sm mb-1">
-                                        Atendida
-                                    </a>
+                                    <form method="POST"
+                                          action="/admin/reserva/estado/{{ r[0] }}/atendida"
+                                          class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-primary btn-sm mb-1">
+                                            Atendida
+                                        </button>
+                                    </form>
 
-                                    <a href="/admin/reserva/estado/{{ r[0] }}/cancelada" class="btn btn-danger btn-sm mb-1">
-                                        Cancelar
-                                    </a>
-                                    <a href="/admin/reserva/recordatorio/{{ r[0] }}" class="btn btn-warning btn-sm mb-1">
-                                        Recordatorio
-                                    </a>
+                                    <form method="POST"
+                                          action="/admin/reserva/estado/{{ r[0] }}/cancelada"
+                                          class="d-inline"
+                                          onsubmit="return confirm('¿Deseas cancelar esta reserva?')">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-danger btn-sm mb-1">
+                                            Cancelar
+                                        </button>
+                                    </form>
+
+                                    <form method="POST"
+                                          action="/admin/reserva/recordatorio/{{ r[0] }}"
+                                          class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-warning btn-sm mb-1">
+                                            Recordatorio
+                                        </button>
+                                    </form>
                                 </td>
                             </tr>
                         {% endfor %}

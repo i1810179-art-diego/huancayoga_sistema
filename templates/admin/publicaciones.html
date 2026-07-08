@@ -86,11 +86,15 @@
                                     Editar
                                 </a>
 
-                                <a href="/admin/publicaciones/eliminar/{{ p[0] }}"
-                                   class="btn btn-danger btn-sm mb-1"
-                                   onclick="return confirm('¿Deseas desactivar esta publicación?')">
-                                    Desactivar
-                                </a>
+                                <form method="POST"
+                                      action="/admin/publicaciones/eliminar/{{ p[0] }}"
+                                      class="d-inline"
+                                      onsubmit="return confirm('¿Deseas desactivar esta publicación?')">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-danger btn-sm mb-1">
+                                        Desactivar
+                                    </button>
+                                </form>
                             </td>
                         </tr>
                     {% endfor %}
