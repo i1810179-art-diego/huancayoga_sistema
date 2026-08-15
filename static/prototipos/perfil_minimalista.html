@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Prototipo minimalista | Mi perfil</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --background: #f7f7f3;
+            --surface: #ffffff;
+            --text: #1c2923;
+            --muted: #718078;
+            --line: #dde3df;
+            --green: #315b49;
+            --green-soft: #e8f0eb;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            color: var(--text);
+            background: var(--background);
+            font-family: "DM Sans", sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .navigation {
+            height: 72px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid var(--line);
+            background: rgba(247, 247, 243, .92);
+        }
+
+        .navigation-inner,
+        main {
+            width: min(960px, calc(100% - 40px));
+            margin-inline: auto;
+        }
+
+        .navigation-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text);
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .brand-symbol {
+            width: 28px;
+            height: 28px;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            color: white;
+            background: var(--green);
+            font-size: 13px;
+        }
+
+        .back-link {
+            color: var(--muted);
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+        }
+
+        .back-link:hover { color: var(--green); }
+
+        main { padding: 72px 0 96px; }
+
+        .page-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 24px;
+            margin-bottom: 42px;
+        }
+
+        .eyebrow {
+            margin: 0 0 10px;
+            color: var(--green);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: .13em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin: 0;
+            font-family: "Newsreader", serif;
+            font-size: clamp(44px, 7vw, 64px);
+            font-weight: 500;
+            letter-spacing: -.035em;
+            line-height: .95;
+        }
+
+        .intro {
+            max-width: 420px;
+            margin: 14px 0 0;
+            color: var(--muted);
+            font-size: 15px;
+            line-height: 1.65;
+        }
+
+        .edit-button {
+            min-width: 130px;
+            padding: 11px 18px;
+            border: 1px solid var(--green);
+            border-radius: 6px;
+            color: white;
+            background: var(--green);
+            font: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .edit-button:hover { background: #244536; }
+
+        .profile {
+            border-top: 1px solid var(--text);
+        }
+
+        .profile-row {
+            min-height: 82px;
+            display: grid;
+            grid-template-columns: minmax(150px, 30%) 1fr;
+            align-items: center;
+            gap: 30px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .profile-label {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .profile-value {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 500;
+            overflow-wrap: anywhere;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .status::before {
+            content: "";
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #5b8a6f;
+        }
+
+        .footer-note {
+            margin: 26px 0 0;
+            color: #929e98;
+            font-size: 12px;
+        }
+
+        @media (max-width: 620px) {
+            .navigation { height: 64px; }
+            main { padding-top: 48px; }
+            .page-header { align-items: stretch; flex-direction: column; }
+            .edit-button { width: 100%; }
+            .profile-row {
+                min-height: auto;
+                padding: 20px 0;
+                grid-template-columns: 1fr;
+                gap: 7px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navigation" aria-label="Navegación del prototipo">
+        <div class="navigation-inner">
+            <a class="brand" href="#">
+                <span class="brand-symbol" aria-hidden="true">H</span>
+                <span>Huancayoga</span>
+            </a>
+            <a class="back-link" href="#">← Volver al panel</a>
+        </div>
+    </nav>
+
+    <main>
+        <header class="page-header">
+            <div>
+                <p class="eyebrow">Cuenta personal</p>
+                <h1>Mi perfil</h1>
+                <p class="intro">Consulta la información asociada a tu cuenta y mantén tus datos actualizados.</p>
+            </div>
+            <button class="edit-button" type="button">Editar perfil</button>
+        </header>
+
+        <section class="profile" aria-label="Información personal">
+            <div class="profile-row">
+                <span class="profile-label">DNI</span>
+                <p class="profile-value">75189024</p>
+            </div>
+            <div class="profile-row">
+                <span class="profile-label">Nombres</span>
+                <p class="profile-value">Iris</p>
+            </div>
+            <div class="profile-row">
+                <span class="profile-label">Apellido paterno</span>
+                <p class="profile-value">Ramírez</p>
+            </div>
+            <div class="profile-row">
+                <span class="profile-label">Apellido materno</span>
+                <p class="profile-value">Torres</p>
+            </div>
+            <div class="profile-row">
+                <span class="profile-label">Celular</span>
+                <p class="profile-value">906 458 296</p>
+            </div>
+            <div class="profile-row">
+                <span class="profile-label">Correo electrónico</span>
+                <p class="profile-value">i1810179@continental.edu.pe</p>
+            </div>
+            <div class="profile-row">
+                <span class="profile-label">Estado de la cuenta</span>
+                <p class="profile-value status">Activa</p>
+            </div>
+            <div class="profile-row">
+                <span class="profile-label">Fecha de registro</span>
+                <p class="profile-value">20 de junio de 2026</p>
+            </div>
+        </section>
+
+        <p class="footer-note">Prototipo visual. Los botones no realizan acciones.</p>
+    </main>
+</body>
+</html>

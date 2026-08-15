@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from flask_mail import Mail, Message
+from werkzeug.utils import secure_filename
 import os
 import requests
 import secrets
@@ -55,11 +56,94 @@ app.config["SYSTEM_ALERTS_ENABLED"] = os.getenv("SYSTEM_ALERTS_ENABLED", "False"
 app.config["SYSTEM_ALERT_EMAIL"] = os.getenv("SYSTEM_ALERT_EMAIL")
 app.config["SYSTEM_ALERT_COOLDOWN_MINUTES"] = int(os.getenv("SYSTEM_ALERT_COOLDOWN_MINUTES", 30))
 
+# Imágenes de productos: carga local y búsqueda opcional en Pexels
+app.config["PRODUCT_UPLOAD_FOLDER"] = os.path.join(app.static_folder, "img", "productos")
+app.config["PUBLICATION_UPLOAD_FOLDER"] = os.path.join(app.static_folder, "img", "publicaciones")
+app.config["MAX_CONTENT_LENGTH"] = int(os.getenv("MAX_UPLOAD_MB", 5)) * 1024 * 1024
+app.config["PEXELS_API_KEY"] = os.getenv("PEXELS_API_KEY")
+app.config["PEXELS_TIMEOUT"] = int(os.getenv("PEXELS_TIMEOUT", 12))
+
 mail = Mail(app)
 
 mysql = MySQL(app)
 
 ultima_alerta_sistema = {}
+
+EXTENSIONES_IMAGEN_PERMITIDAS = {"jpg", "jpeg", "png", "webp"}
+FIRMAS_IMAGEN = {
+    "jpg": (b"\xff\xd8\xff",),
+    "jpeg": (b"\xff\xd8\xff",),
+    "png": (b"\x89PNG\r\n\x1a\n",),
+    "webp": (b"RIFF",),
+}
+
+
+def archivo_imagen_valido(archivo, extension):
+    posicion = archivo.stream.tell()
+    cabecera = archivo.stream.read(16)
+    archivo.stream.seek(posicion)
+
+    if extension == "webp":
+        return cabecera.startswith(b"RIFF") and cabecera[8:12] == b"WEBP"
+
+    return any(cabecera.startswith(firma) for firma in FIRMAS_IMAGEN[extension])
+
+
+def guardar_imagen_producto(archivo):
+    if not archivo or not archivo.filename:
+        return None
+
+    nombre_seguro = secure_filename(archivo.filename)
+    extension = nombre_seguro.rsplit(".", 1)[-1].lower() if "." in nombre_seguro else ""
+
+    if extension not in EXTENSIONES_IMAGEN_PERMITIDAS:
+        raise ValueError("Formato no permitido. Usa JPG, PNG o WebP.")
+
+    if not archivo_imagen_valido(archivo, extension):
+        raise ValueError("El archivo seleccionado no contiene una imagen válida.")
+
+    os.makedirs(app.config["PRODUCT_UPLOAD_FOLDER"], exist_ok=True)
+    base = os.path.splitext(nombre_seguro)[0][:70] or "producto"
+    nombre_final = f"{base}-{secrets.token_hex(6)}.{extension}"
+    archivo.save(os.path.join(app.config["PRODUCT_UPLOAD_FOLDER"], nombre_final))
+    return nombre_final
+
+
+def guardar_imagen_publicacion(archivo):
+    if not archivo or not archivo.filename:
+        return None
+
+    nombre_seguro = secure_filename(archivo.filename)
+    extension = nombre_seguro.rsplit(".", 1)[-1].lower() if "." in nombre_seguro else ""
+
+    if extension not in EXTENSIONES_IMAGEN_PERMITIDAS:
+        raise ValueError("Formato no permitido. Usa JPG, PNG o WebP.")
+
+    if not archivo_imagen_valido(archivo, extension):
+        raise ValueError("El archivo seleccionado no contiene una imagen válida.")
+
+    os.makedirs(app.config["PUBLICATION_UPLOAD_FOLDER"], exist_ok=True)
+    base = os.path.splitext(nombre_seguro)[0][:70] or "publicacion"
+    nombre_final = f"{base}-{secrets.token_hex(6)}.{extension}"
+    archivo.save(os.path.join(app.config["PUBLICATION_UPLOAD_FOLDER"], nombre_final))
+    return nombre_final
+
+
+def normalizar_imagen_seleccionada(referencia):
+    referencia = (referencia or "").strip()
+
+    if not referencia:
+        return ""
+
+    if referencia.startswith("https://images.pexels.com/"):
+        if len(referencia) > 255:
+            raise ValueError("La dirección de la imagen seleccionada es demasiado larga.")
+        return referencia
+
+    if referencia.startswith(("http://", "https://")):
+        raise ValueError("Selecciona una imagen obtenida desde el buscador de Pexels.")
+
+    return secure_filename(os.path.basename(referencia))
 
 
 def generar_csrf_token():
@@ -93,6 +177,15 @@ def proteger_post_con_csrf():
         if not csrf_valido():
             flash("La solicitud no pudo validarse. Intenta nuevamente.", "danger")
             return redirect(request.referrer or url_for("index"))
+
+
+@app.errorhandler(413)
+def archivo_demasiado_grande(error):
+    flash(
+        f"La imagen supera el límite de {os.getenv('MAX_UPLOAD_MB', '5')} MB.",
+        "danger"
+    )
+    return redirect(request.referrer or url_for("admin_productos"))
 
 
 def enviar_alerta_sistema(clave, asunto, detalle):
@@ -491,6 +584,68 @@ def reservar():
 # MÓDULO DE PRODUCTOS
 # ==========================
 
+@app.route("/api/admin/productos/imagenes")
+@app.route("/api/admin/publicaciones/imagenes")
+def api_admin_imagenes_productos():
+    if "admin_id" not in session:
+        return {"ok": False, "mensaje": "Debes iniciar sesión como administradora."}, 401
+
+    consulta = " ".join(request.args.get("q", "").split())[:160]
+
+    if len(consulta) < 2:
+        return {"ok": False, "mensaje": "Escribe el nombre o la descripción del producto."}, 400
+
+    api_key = app.config.get("PEXELS_API_KEY")
+
+    if not api_key:
+        return {
+            "ok": False,
+            "mensaje": "La búsqueda de imágenes aún no está configurada. Agrega PEXELS_API_KEY al archivo .env."
+        }, 503
+
+    try:
+        respuesta = requests.get(
+            "https://api.pexels.com/v1/search",
+            headers={"Authorization": api_key},
+            params={
+                "query": consulta,
+                "per_page": 8,
+                "orientation": "landscape",
+                "locale": "es-ES"
+            },
+            timeout=app.config["PEXELS_TIMEOUT"]
+        )
+
+        if respuesta.status_code == 401:
+            return {"ok": False, "mensaje": "La clave de Pexels no es válida."}, 502
+
+        respuesta.raise_for_status()
+        fotos = []
+
+        for foto in respuesta.json().get("photos", []):
+            imagen = foto.get("src", {}).get("large")
+            miniatura = foto.get("src", {}).get("medium") or imagen
+
+            if not imagen or not imagen.startswith("https://images.pexels.com/"):
+                continue
+
+            fotos.append({
+                "id": foto.get("id"),
+                "imagen": imagen,
+                "miniatura": miniatura,
+                "alt": foto.get("alt") or f"Imagen relacionada con {consulta}",
+                "fotografo": foto.get("photographer") or "Pexels",
+                "fotografo_url": foto.get("photographer_url"),
+                "pexels_url": foto.get("url")
+            })
+
+        return {"ok": True, "imagenes": fotos}
+
+    except requests.RequestException as error:
+        print(f"Error al consultar Pexels: {error}")
+        return {"ok": False, "mensaje": "No se pudo consultar Pexels en este momento."}, 502
+
+
 @app.route("/productos")
 def productos():
     if "cliente_id" not in session:
@@ -611,7 +766,12 @@ def admin_nuevo_producto():
         descripcion = request.form["descripcion"]
         precio = request.form["precio"]
         stock = request.form["stock"]
-        imagen = request.form["imagen"]
+        try:
+            imagen_subida = guardar_imagen_producto(request.files.get("imagen_archivo"))
+            imagen = imagen_subida or normalizar_imagen_seleccionada(request.form.get("imagen"))
+        except ValueError as error:
+            flash(str(error), "danger")
+            return redirect(url_for("admin_nuevo_producto"))
 
         cur = mysql.connection.cursor()
         cur.execute("""
@@ -674,7 +834,15 @@ def admin_editar_producto(id):
         descripcion = request.form["descripcion"]
         precio = request.form["precio"]
         stock = request.form["stock"]
-        imagen = request.form["imagen"]
+        try:
+            imagen_subida = guardar_imagen_producto(request.files.get("imagen_archivo"))
+            imagen_seleccionada = normalizar_imagen_seleccionada(request.form.get("imagen"))
+            quitar_imagen = request.form.get("eliminar_imagen") == "1"
+            imagen = imagen_subida or imagen_seleccionada or ("" if quitar_imagen else producto[5])
+        except ValueError as error:
+            cur.close()
+            flash(str(error), "danger")
+            return redirect(url_for("admin_editar_producto", id=id))
         estado = request.form["estado"]
 
         cur.execute("""
@@ -1416,7 +1584,12 @@ def admin_nueva_publicacion():
     if request.method == "POST":
         titulo = request.form["titulo"]
         contenido = request.form["contenido"]
-        imagen = request.form["imagen"]
+        try:
+            imagen_subida = guardar_imagen_publicacion(request.files.get("imagen_archivo"))
+            imagen = imagen_subida or normalizar_imagen_seleccionada(request.form.get("imagen"))
+        except ValueError as error:
+            flash(str(error), "danger")
+            return redirect(url_for("admin_nueva_publicacion"))
         tipo = request.form["tipo"]
 
         cur = mysql.connection.cursor()
@@ -1483,7 +1656,15 @@ def admin_editar_publicacion(id):
     if request.method == "POST":
         titulo = request.form["titulo"]
         contenido = request.form["contenido"]
-        imagen = request.form["imagen"]
+        try:
+            imagen_subida = guardar_imagen_publicacion(request.files.get("imagen_archivo"))
+            imagen_seleccionada = normalizar_imagen_seleccionada(request.form.get("imagen"))
+            quitar_imagen = request.form.get("eliminar_imagen") == "1"
+            imagen = imagen_subida or imagen_seleccionada or ("" if quitar_imagen else publicacion[3])
+        except ValueError as error:
+            cur.close()
+            flash(str(error), "danger")
+            return redirect(url_for("admin_editar_publicacion", id=id))
         tipo = request.form["tipo"]
         estado = request.form["estado"]
 

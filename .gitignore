@@ -1,7 +1,10 @@
 .env
 venv/
+.venv/
 __pycache__/
 *.pyc
 instance/
 *.db
 .DS_Store
+.tmp/
+*.log

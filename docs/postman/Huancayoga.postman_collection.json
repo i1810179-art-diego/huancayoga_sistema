@@ -1,0 +1,136 @@
+{
+  "info": {
+    "name": "Huancayoga - Pruebas de API y seguridad",
+    "description": "Casos locales para demostrar APIs, validación, conexión y CSRF. No contiene credenciales ni datos personales reales.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://127.0.0.1:5000" },
+    { "key": "dniPrueba", "value": "12345678" },
+    { "key": "csrfToken", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "01 - Conexión Aiven correcta",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/check-db",
+        "description": "Solo debe habilitarse temporalmente en desarrollo. No expongas credenciales en capturas."
+      },
+      "event": [{
+        "listen": "test",
+        "script": { "exec": [
+          "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+          "pm.test('MySQL conectado', () => pm.expect(pm.response.json().mensaje).to.include('Conexión correcta'));"
+        ]}
+      }]
+    },
+    {
+      "name": "02 - Chatbot: solicitud válida",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"mensaje\": \"Hola, quiero conocer los productos\"\n}" },
+        "url": "{{baseUrl}}/api/chatbot"
+      },
+      "event": [{
+        "listen": "test",
+        "script": { "exec": [
+          "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+          "pm.test('Respuesta JSON válida', () => { const j = pm.response.json(); pm.expect(j.ok).to.eql(true); pm.expect(j.respuesta).to.be.a('string').and.not.empty; });"
+        ]}
+      }]
+    },
+    {
+      "name": "03 - Chatbot: mensaje vacío rechazado",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"mensaje\": \"\"\n}" },
+        "url": "{{baseUrl}}/api/chatbot"
+      },
+      "event": [{
+        "listen": "test",
+        "script": { "exec": [
+          "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+          "pm.test('Error controlado', () => pm.expect(pm.response.json().ok).to.eql(false));"
+        ]}
+      }]
+    },
+    {
+      "name": "04 - RENIEC: DNI inválido rechazado",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/reniec/123"
+      },
+      "event": [{
+        "listen": "test",
+        "script": { "exec": [
+          "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+          "pm.test('Validación de ocho dígitos', () => pm.expect(pm.response.json().mensaje).to.include('8 dígitos'));"
+        ]}
+      }]
+    },
+    {
+      "name": "05 - RENIEC: consulta configurada",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/reniec/{{dniPrueba}}",
+        "description": "Requiere RENIEC_API_URL y RENIEC_API_TOKEN. Usa únicamente un DNI de prueba autorizado y ocúltalo en la captura."
+      }
+    },
+    {
+      "name": "06 - CSRF: obtener token y cookie",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/admin/login"
+      },
+      "event": [{
+        "listen": "test",
+        "script": { "exec": [
+          "pm.test('Formulario disponible', () => pm.response.to.have.status(200));",
+          "const match = pm.response.text().match(/name=\"csrf_token\" value=\"([^\"]+)\"/);",
+          "pm.test('Token CSRF presente', () => pm.expect(match).not.to.eql(null));",
+          "if (match) pm.collectionVariables.set('csrfToken', match[1]);"
+        ]}
+      }]
+    },
+    {
+      "name": "07 - CSRF: POST sin token bloqueado",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded" }],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            { "key": "usuario", "value": "usuario_prueba" },
+            { "key": "password", "value": "clave_incorrecta" }
+          ]
+        },
+        "url": "{{baseUrl}}/admin/login",
+        "description": "Desactiva temporalmente Follow redirects en Postman para capturar el HTTP 302 de bloqueo."
+      }
+    },
+    {
+      "name": "08 - CSRF: POST con token aceptado por el filtro",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded" }],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            { "key": "csrf_token", "value": "{{csrfToken}}" },
+            { "key": "usuario", "value": "usuario_prueba" },
+            { "key": "password", "value": "clave_incorrecta" }
+          ]
+        },
+        "url": "{{baseUrl}}/admin/login",
+        "description": "Ejecuta primero el caso 06 para conservar cookie y token. Las credenciales falsas deben terminar en login, pero la petición supera el filtro CSRF."
+      }
+    }
+  ]
+}

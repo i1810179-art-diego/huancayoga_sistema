@@ -37,10 +37,14 @@
                     <div class="card shadow h-100">
 
                         {% if p[3] %}
-                            <img src="{{ url_for('static', filename='img/publicaciones/' + p[3]) }}"
-                                 class="card-img-top"
-                                 style="height:320px; object-fit:cover;"
-                                 alt="{{ p[1] }}">
+                            {% if p[3].startswith('http://') or p[3].startswith('https://') %}
+                                <img src="{{ p[3] }}" class="card-img-top" style="height:320px; object-fit:cover;" alt="{{ p[1] }}" loading="lazy">
+                            {% else %}
+                                <img src="{{ url_for('static', filename='img/publicaciones/' + p[3]) }}"
+                                     class="card-img-top"
+                                     style="height:320px; object-fit:cover;"
+                                     alt="{{ p[1] }}" loading="lazy">
+                            {% endif %}
                         {% endif %}
 
                         <div class="card-body p-4">
@@ -62,6 +66,11 @@
         {% endif %}
 
     </div>
+
+    <p class="text-center small mt-4 mb-0">
+        Algunas fotografías son proporcionadas por
+        <a href="https://www.pexels.com" target="_blank" rel="noopener noreferrer">Pexels</a>.
+    </p>
 
 </section>
 

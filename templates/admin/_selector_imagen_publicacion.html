@@ -1,0 +1,159 @@
+<section class="publication-image-selector" aria-labelledby="publication-image-title">
+    <div class="publication-image-selector-heading">
+        <div>
+            <span class="admin-small-title">Imagen</span>
+            <h3 id="publication-image-title">Añade una portada</h3>
+        </div>
+        <span>Opcional</span>
+    </div>
+
+    <input type="hidden" id="publication-image-input" name="imagen" value="{{ imagen_actual or '' }}">
+    <input type="hidden" id="publication-image-remove" name="eliminar_imagen" value="0">
+
+    <div class="publication-image-method">
+        <span class="publication-image-method-icon" aria-hidden="true">↑</span>
+        <div>
+            <label class="form-label" for="publication-image-file">Subir desde celular o computadora</label>
+            <input type="file" id="publication-image-file" name="imagen_archivo" class="form-control" accept="image/jpeg,image/png,image/webp">
+            <small class="form-text">JPG, PNG o WebP. Máximo 5 MB.</small>
+        </div>
+    </div>
+
+    <div class="product-option-divider"><span>o</span></div>
+
+    <div class="publication-image-method">
+        <span class="publication-image-method-icon" aria-hidden="true">⌕</span>
+        <div>
+            <label class="form-label" for="publication-image-query">Buscar en Pexels</label>
+            <p>Usaremos el título y el contenido para encontrar imágenes relacionadas.</p>
+            <div class="publication-image-search">
+                <input type="search" id="publication-image-query" class="form-control" placeholder="Ejemplo: meditación en la naturaleza">
+                <button type="button" id="publication-image-search-button" class="btn btn-outline-success">Buscar</button>
+            </div>
+            <div id="publication-image-feedback" class="product-image-feedback" role="status" aria-live="polite"></div>
+        </div>
+    </div>
+
+    <div id="publication-image-results" class="publication-image-results" aria-label="Imágenes sugeridas"></div>
+
+    <div class="publication-image-selector-footer">
+        <button type="button" id="publication-image-remove-button">Quitar imagen</button>
+        <a href="https://www.pexels.com" target="_blank" rel="noopener noreferrer">Fotos proporcionadas por Pexels</a>
+    </div>
+</section>
+
+<script>
+    window.addEventListener('DOMContentLoaded', () => {
+        const fileInput = document.getElementById('publication-image-file');
+        const imageValue = document.getElementById('publication-image-input');
+        const removeValue = document.getElementById('publication-image-remove');
+        const queryInput = document.getElementById('publication-image-query');
+        const searchButton = document.getElementById('publication-image-search-button');
+        const feedback = document.getElementById('publication-image-feedback');
+        const results = document.getElementById('publication-image-results');
+        const removeButton = document.getElementById('publication-image-remove-button');
+        const titleInput = document.getElementById('publication-title');
+        const contentInput = document.getElementById('publication-content');
+        const previewMedia = document.getElementById('publication-preview-media');
+        const typeInput = document.getElementById('publication-type-input');
+        const symbols = { monologo: '◇', frase: '“', noticia: '○', foto: '▧', promocion: '✦' };
+
+        function showImage(source, alt) {
+            const image = document.createElement('img');
+            image.src = source;
+            image.alt = alt || 'Vista previa de la publicación';
+            previewMedia.replaceChildren(image);
+        }
+
+        function showPlaceholder() {
+            const symbol = document.createElement('span');
+            symbol.setAttribute('aria-hidden', 'true');
+            symbol.textContent = symbols[typeInput.value] || '◇';
+            previewMedia.replaceChildren(symbol);
+        }
+
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+            imageValue.value = '';
+            removeValue.value = '0';
+            showImage(URL.createObjectURL(file), file.name);
+            results.querySelectorAll('.publication-image-result').forEach(card => card.classList.remove('is-selected'));
+            feedback.textContent = 'Imagen local seleccionada. Se subirá al guardar.';
+        });
+
+        searchButton.addEventListener('click', async () => {
+            const automaticQuery = [titleInput.value, contentInput.value].filter(Boolean).join(' ').trim();
+            const query = queryInput.value.trim() || automaticQuery;
+
+            if (query.length < 2) {
+                feedback.textContent = 'Primero escribe el título o parte del contenido.';
+                feedback.className = 'product-image-feedback is-error';
+                return;
+            }
+
+            queryInput.value = query;
+            searchButton.disabled = true;
+            searchButton.textContent = 'Buscando…';
+            feedback.textContent = 'Buscando fotografías relacionadas…';
+            feedback.className = 'product-image-feedback';
+            results.replaceChildren();
+
+            try {
+                const response = await fetch(`/api/admin/publicaciones/imagenes?q=${encodeURIComponent(query)}`, {
+                    credentials: 'same-origin',
+                    headers: { 'Accept': 'application/json' }
+                });
+                const data = await response.json();
+                if (!response.ok || !data.ok) throw new Error(data.mensaje || 'No se pudieron buscar imágenes.');
+
+                if (!data.imagenes.length) {
+                    feedback.textContent = 'No encontramos imágenes. Prueba con términos más generales.';
+                    return;
+                }
+
+                feedback.textContent = 'Selecciona la portada que mejor acompañe el contenido.';
+                data.imagenes.forEach(photo => {
+                    const card = document.createElement('button');
+                    card.type = 'button';
+                    card.className = 'publication-image-result';
+                    card.setAttribute('aria-label', `Usar fotografía de ${photo.fotografo}`);
+
+                    const image = document.createElement('img');
+                    image.src = photo.miniatura;
+                    image.alt = photo.alt;
+                    image.loading = 'lazy';
+                    const credit = document.createElement('span');
+                    credit.textContent = `Foto: ${photo.fotografo}`;
+                    card.append(image, credit);
+
+                    card.addEventListener('click', () => {
+                        results.querySelectorAll('.publication-image-result').forEach(item => item.classList.remove('is-selected'));
+                        card.classList.add('is-selected');
+                        imageValue.value = photo.imagen;
+                        removeValue.value = '0';
+                        fileInput.value = '';
+                        showImage(photo.imagen, photo.alt);
+                        feedback.textContent = `Portada seleccionada. Fotografía de ${photo.fotografo} en Pexels.`;
+                    });
+                    results.appendChild(card);
+                });
+            } catch (error) {
+                feedback.textContent = error.message;
+                feedback.className = 'product-image-feedback is-error';
+            } finally {
+                searchButton.disabled = false;
+                searchButton.textContent = 'Buscar';
+            }
+        });
+
+        removeButton.addEventListener('click', () => {
+            fileInput.value = '';
+            imageValue.value = '';
+            removeValue.value = '1';
+            showPlaceholder();
+            results.querySelectorAll('.publication-image-result').forEach(card => card.classList.remove('is-selected'));
+            feedback.textContent = 'La imagen se quitará al guardar los cambios.';
+        });
+    });
+</script>

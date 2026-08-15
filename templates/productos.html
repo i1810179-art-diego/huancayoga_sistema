@@ -42,9 +42,13 @@
                         <div class="card h-100 shadow-sm">
 
                             {% if producto[5] %}
-                                <img src="{{ url_for('static', filename='img/productos/' + producto[5]) }}" 
-                                     class="card-img-top producto-img" 
-                                     alt="{{ producto[1] }}">
+                                {% if producto[5].startswith('http://') or producto[5].startswith('https://') %}
+                                    <img src="{{ producto[5] }}" class="card-img-top producto-img" alt="{{ producto[1] }}" loading="lazy">
+                                {% else %}
+                                    <img src="{{ url_for('static', filename='img/productos/' + producto[5]) }}"
+                                         class="card-img-top producto-img"
+                                         alt="{{ producto[1] }}" loading="lazy">
+                                {% endif %}
                             {% else %}
                                 <div class="sin-imagen">
                                     Sin imagen
@@ -106,6 +110,10 @@
             {% endif %}
 
         </div>
+        <p class="text-center small mt-4 mb-0">
+            Algunas fotografías son proporcionadas por
+            <a href="https://www.pexels.com" target="_blank" rel="noopener noreferrer">Pexels</a>.
+        </p>
     </section>
 
 </body>

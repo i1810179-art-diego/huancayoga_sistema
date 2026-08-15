@@ -1,0 +1,185 @@
+<section class="product-image-studio" aria-labelledby="product-image-title">
+    <div class="product-image-heading">
+        <div>
+            <span class="admin-small-title">Imagen del producto</span>
+            <h2 id="product-image-title">Elige cómo agregarla</h2>
+        </div>
+        <span class="product-image-optional">Opcional</span>
+    </div>
+
+    <div class="product-image-preview" id="product-image-preview">
+        {% if imagen_actual %}
+            {% if imagen_actual.startswith('http://') or imagen_actual.startswith('https://') %}
+                <img src="{{ imagen_actual }}" alt="Vista previa de la imagen actual" id="product-preview-img">
+            {% else %}
+                <img src="{{ url_for('static', filename='img/productos/' + imagen_actual) }}" alt="Vista previa de la imagen actual" id="product-preview-img">
+            {% endif %}
+            <div class="product-preview-empty d-none" id="product-preview-empty">
+        {% else %}
+            <img src="" alt="Vista previa de la imagen seleccionada" class="d-none" id="product-preview-img">
+            <div class="product-preview-empty" id="product-preview-empty">
+        {% endif %}
+                <span aria-hidden="true">▧</span>
+                <strong>Aún no hay una imagen</strong>
+                <small>Sube una foto o busca una sugerencia.</small>
+            </div>
+    </div>
+
+    <input type="hidden" name="imagen" id="product-image-value" value="{{ imagen_actual or '' }}">
+    <input type="hidden" name="eliminar_imagen" id="product-image-remove" value="0">
+
+    <div class="product-image-option">
+        <span class="product-option-number">1</span>
+        <div class="product-option-content">
+            <label for="product-image-file" class="form-label">Subir desde este dispositivo</label>
+            <p>En celular podrás elegir una foto de la galería o usar la cámara.</p>
+            <input
+                type="file"
+                name="imagen_archivo"
+                id="product-image-file"
+                class="form-control"
+                accept="image/jpeg,image/png,image/webp">
+            <small class="form-text">JPG, PNG o WebP. Tamaño máximo: 5 MB.</small>
+        </div>
+    </div>
+
+    <div class="product-option-divider"><span>o</span></div>
+
+    <div class="product-image-option">
+        <span class="product-option-number">2</span>
+        <div class="product-option-content">
+            <label for="product-image-query" class="form-label">Buscar una imagen relacionada</label>
+            <p>Usaremos el nombre y la descripción para sugerir fotografías.</p>
+            <div class="product-image-search">
+                <input type="search" id="product-image-query" class="form-control" placeholder="Ejemplo: mat de yoga ecológico">
+                <button type="button" class="btn btn-outline-success" id="product-image-search-button">Buscar imágenes</button>
+            </div>
+            <div class="product-image-feedback" id="product-image-feedback" role="status" aria-live="polite"></div>
+        </div>
+    </div>
+
+    <div class="product-image-results" id="product-image-results" aria-label="Imágenes sugeridas"></div>
+
+    <div class="product-image-footer">
+        <button type="button" class="product-image-remove" id="product-image-remove-button">Quitar imagen</button>
+        <a href="https://www.pexels.com" target="_blank" rel="noopener noreferrer">Fotos proporcionadas por Pexels</a>
+    </div>
+</section>
+
+<script>
+(() => {
+    const fileInput = document.getElementById('product-image-file');
+    const imageValue = document.getElementById('product-image-value');
+    const removeValue = document.getElementById('product-image-remove');
+    const preview = document.getElementById('product-preview-img');
+    const emptyPreview = document.getElementById('product-preview-empty');
+    const queryInput = document.getElementById('product-image-query');
+    const searchButton = document.getElementById('product-image-search-button');
+    const feedback = document.getElementById('product-image-feedback');
+    const results = document.getElementById('product-image-results');
+    const removeButton = document.getElementById('product-image-remove-button');
+    const nameInput = document.querySelector('[name="nombre"]');
+    const descriptionInput = document.querySelector('[name="descripcion"]');
+
+    function showPreview(source, alt) {
+        preview.src = source;
+        preview.alt = alt || 'Vista previa de la imagen seleccionada';
+        preview.classList.remove('d-none');
+        emptyPreview.classList.add('d-none');
+    }
+
+    function clearPreview() {
+        preview.removeAttribute('src');
+        preview.classList.add('d-none');
+        emptyPreview.classList.remove('d-none');
+    }
+
+    fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        if (!file) return;
+
+        imageValue.value = '';
+        removeValue.value = '0';
+        showPreview(URL.createObjectURL(file), file.name);
+        results.querySelectorAll('.product-image-result').forEach(card => card.classList.remove('is-selected'));
+    });
+
+    searchButton.addEventListener('click', async () => {
+        const automaticQuery = [nameInput?.value, descriptionInput?.value].filter(Boolean).join(' ').trim();
+        const query = queryInput.value.trim() || automaticQuery;
+
+        if (query.length < 2) {
+            feedback.textContent = 'Primero escribe el nombre o la descripción del producto.';
+            feedback.className = 'product-image-feedback is-error';
+            return;
+        }
+
+        queryInput.value = query;
+        searchButton.disabled = true;
+        searchButton.textContent = 'Buscando…';
+        feedback.textContent = 'Buscando fotografías relacionadas…';
+        feedback.className = 'product-image-feedback';
+        results.replaceChildren();
+
+        try {
+            const response = await fetch(`/api/admin/productos/imagenes?q=${encodeURIComponent(query)}`, {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' }
+            });
+            const data = await response.json();
+
+            if (!response.ok || !data.ok) throw new Error(data.mensaje || 'No se pudieron buscar imágenes.');
+
+            if (!data.imagenes.length) {
+                feedback.textContent = 'No encontramos imágenes. Prueba con palabras más generales.';
+                return;
+            }
+
+            feedback.textContent = 'Selecciona la imagen que mejor represente el producto.';
+
+            data.imagenes.forEach(photo => {
+                const card = document.createElement('button');
+                card.type = 'button';
+                card.className = 'product-image-result';
+                card.setAttribute('aria-label', `Usar imagen de ${photo.fotografo}`);
+
+                const image = document.createElement('img');
+                image.src = photo.miniatura;
+                image.alt = photo.alt;
+                image.loading = 'lazy';
+
+                const credit = document.createElement('span');
+                credit.textContent = `Foto: ${photo.fotografo}`;
+                card.append(image, credit);
+
+                card.addEventListener('click', () => {
+                    results.querySelectorAll('.product-image-result').forEach(item => item.classList.remove('is-selected'));
+                    card.classList.add('is-selected');
+                    imageValue.value = photo.imagen;
+                    removeValue.value = '0';
+                    fileInput.value = '';
+                    showPreview(photo.imagen, photo.alt);
+                    feedback.textContent = `Imagen seleccionada. Fotografía de ${photo.fotografo} en Pexels.`;
+                });
+
+                results.appendChild(card);
+            });
+        } catch (error) {
+            feedback.textContent = error.message;
+            feedback.className = 'product-image-feedback is-error';
+        } finally {
+            searchButton.disabled = false;
+            searchButton.textContent = 'Buscar imágenes';
+        }
+    });
+
+    removeButton.addEventListener('click', () => {
+        fileInput.value = '';
+        imageValue.value = '';
+        removeValue.value = '1';
+        clearPreview();
+        results.querySelectorAll('.product-image-result').forEach(card => card.classList.remove('is-selected'));
+        feedback.textContent = 'La imagen se quitará al guardar el producto.';
+    });
+})();
+</script>

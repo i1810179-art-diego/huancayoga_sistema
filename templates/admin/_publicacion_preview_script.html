@@ -1,0 +1,56 @@
+<script>
+    (() => {
+        const title = document.getElementById('publication-title');
+        const content = document.getElementById('publication-content');
+        const type = document.getElementById('publication-type-input');
+        const image = document.getElementById('publication-image-input');
+        const imageFile = document.getElementById('publication-image-file');
+        const previewTitle = document.getElementById('publication-preview-title');
+        const previewContent = document.getElementById('publication-preview-content');
+        const previewType = document.getElementById('publication-preview-type');
+        const previewMedia = document.getElementById('publication-preview-media');
+        const characterCount = document.getElementById('publication-character-count');
+        const typeLabels = { monologo: 'Monólogo', frase: 'Frase', noticia: 'Noticia', foto: 'Fotografía', promocion: 'Promoción' };
+        const typeSymbols = { monologo: '◇', frase: '“', noticia: '○', foto: '▧', promocion: '✦' };
+
+        function updateText() {
+            previewTitle.textContent = title.value.trim() || 'Título de tu publicación';
+            const value = content.value.trim();
+            previewContent.textContent = value ? `${value.slice(0, 145)}${value.length > 145 ? '…' : ''}` : 'Aquí aparecerá una vista previa del contenido.';
+            characterCount.textContent = `${content.value.length} caracteres`;
+        }
+
+        function updateType() {
+            previewType.textContent = typeLabels[type.value] || type.value;
+            previewType.className = `publication-type-chip publication-type-${type.value}`;
+            if (!image.value.trim() && !imageFile?.files.length) previewMedia.innerHTML = `<span aria-hidden="true">${typeSymbols[type.value] || '◇'}</span>`;
+        }
+
+        function updateImage() {
+            const value = image.value.trim();
+            if (!value) {
+                if (imageFile?.files.length) return;
+                previewMedia.innerHTML = `<span aria-hidden="true">${typeSymbols[type.value] || '◇'}</span>`;
+                return;
+            }
+
+            const source = /^https?:\/\//i.test(value) ? value : `/static/img/publicaciones/${encodeURIComponent(value)}`;
+            const element = document.createElement('img');
+            element.src = source;
+            element.alt = 'Vista previa de la publicación';
+            element.addEventListener('error', () => {
+                previewMedia.innerHTML = '<span aria-hidden="true">◇</span>';
+            }, { once: true });
+            previewMedia.replaceChildren(element);
+        }
+
+        title.addEventListener('input', updateText);
+        content.addEventListener('input', updateText);
+        type.addEventListener('change', () => { updateType(); updateImage(); });
+        image.addEventListener('change', updateImage);
+        image.addEventListener('blur', updateImage);
+        updateText();
+        updateType();
+        updateImage();
+    })();
+</script>

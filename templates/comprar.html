@@ -63,9 +63,13 @@
 
                         <div class="col-md-5">
                             {% if producto[5] %}
-                                <img src="{{ url_for('static', filename='img/productos/' + producto[5]) }}" 
-                                     class="img-fluid rounded shadow-sm"
-                                     alt="{{ producto[1] }}">
+                                {% if producto[5].startswith('http://') or producto[5].startswith('https://') %}
+                                    <img src="{{ producto[5] }}" class="img-fluid rounded shadow-sm" alt="{{ producto[1] }}">
+                                {% else %}
+                                    <img src="{{ url_for('static', filename='img/productos/' + producto[5]) }}"
+                                         class="img-fluid rounded shadow-sm"
+                                         alt="{{ producto[1] }}">
+                                {% endif %}
                             {% else %}
                                 <div class="sin-imagen">
                                     Sin imagen
