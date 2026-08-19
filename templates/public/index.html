@@ -45,6 +45,10 @@
                     Inicio
                 </a>
 
+                <a href="{{ url_for('como_llegar') }}" class="btn btn-menu">
+                    Cómo llegar
+                </a>
+
                 {% if session.get("cliente_id") %}
 
                     <a href="/cliente/dashboard" class="btn btn-menu">
@@ -365,6 +369,7 @@
                     <h5>Contacto</h5>
                     <p>Huancayo, Perú</p>
                     <p>WhatsApp: 906458296</p>
+                    <p><a href="{{ url_for('como_llegar') }}">Ver cómo llegar</a></p>
                 </div>
 
             </div>

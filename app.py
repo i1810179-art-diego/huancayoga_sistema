@@ -10,6 +10,8 @@ import requests
 import secrets
 import json
 import html
+import math
+import time
 
 
 load_dotenv()
@@ -63,11 +65,19 @@ app.config["MAX_CONTENT_LENGTH"] = int(os.getenv("MAX_UPLOAD_MB", 5)) * 1024 * 1
 app.config["PEXELS_API_KEY"] = os.getenv("PEXELS_API_KEY")
 app.config["PEXELS_TIMEOUT"] = int(os.getenv("PEXELS_TIMEOUT", 12))
 
+# Rutas y ubicación pública de Huancayoga
+app.config["ORS_API_KEY"] = os.getenv("ORS_API_KEY")
+app.config["ORS_TIMEOUT"] = int(os.getenv("ORS_TIMEOUT") or 15)
+app.config["HUANCAYOGA_LAT"] = float(os.getenv("HUANCAYOGA_LAT") or -12.055280)
+app.config["HUANCAYOGA_LON"] = float(os.getenv("HUANCAYOGA_LON") or -75.203375)
+
 mail = Mail(app)
 
 mysql = MySQL(app)
 
 ultima_alerta_sistema = {}
+cache_rutas_huancayoga = {}
+solicitudes_ruta_por_ip = {}
 
 EXTENSIONES_IMAGEN_PERMITIDAS = {"jpg", "jpeg", "png", "webp"}
 FIRMAS_IMAGEN = {
@@ -171,7 +181,7 @@ def csrf_valido():
 
 @app.before_request
 def proteger_post_con_csrf():
-    rutas_excluidas = {"api_chatbot"}
+    rutas_excluidas = {"api_chatbot", "api_ruta_huancayoga"}
 
     if request.method == "POST" and request.endpoint not in rutas_excluidas:
         if not csrf_valido():
@@ -478,9 +488,231 @@ def correo_pedido_registrado(nombre, producto, cantidad, total):
     """
 
 
+PERFILES_RUTA_ORS = {
+    "walking": "foot-walking",
+    "cycling": "cycling-regular",
+    "driving": "driving-car",
+}
+
+
+def distancia_haversine_km(latitud_origen, longitud_origen, latitud_destino, longitud_destino):
+    radio_tierra_km = 6371.0088
+    latitud_1 = math.radians(latitud_origen)
+    latitud_2 = math.radians(latitud_destino)
+    diferencia_latitud = math.radians(latitud_destino - latitud_origen)
+    diferencia_longitud = math.radians(longitud_destino - longitud_origen)
+
+    calculo = (
+        math.sin(diferencia_latitud / 2) ** 2
+        + math.cos(latitud_1)
+        * math.cos(latitud_2)
+        * math.sin(diferencia_longitud / 2) ** 2
+    )
+    calculo = min(1, max(0, calculo))
+    return radio_tierra_km * 2 * math.atan2(math.sqrt(calculo), math.sqrt(1 - calculo))
+
+
+def ip_cliente_actual():
+    encabezado_proxy = request.headers.get("X-Forwarded-For", "")
+    return encabezado_proxy.split(",")[0].strip() or request.remote_addr or "desconocida"
+
+
+def solicitud_ruta_permitida():
+    ahora = time.monotonic()
+    ventana_segundos = 60
+    limite_por_minuto = 20
+    ip_cliente = ip_cliente_actual()
+    historial = [
+        instante
+        for instante in solicitudes_ruta_por_ip.get(ip_cliente, [])
+        if ahora - instante < ventana_segundos
+    ]
+
+    if len(historial) >= limite_por_minuto:
+        solicitudes_ruta_por_ip[ip_cliente] = historial
+        return False
+
+    historial.append(ahora)
+    solicitudes_ruta_por_ip[ip_cliente] = historial
+
+    if len(solicitudes_ruta_por_ip) > 500:
+        inactivos = [
+            ip
+            for ip, instantes in solicitudes_ruta_por_ip.items()
+            if not instantes or ahora - instantes[-1] >= ventana_segundos
+        ]
+        for ip in inactivos:
+            solicitudes_ruta_por_ip.pop(ip, None)
+
+    return True
+
+
 @app.route("/")
 def index():
     return render_template("public/index.html")
+
+
+@app.route("/como-llegar")
+def como_llegar():
+    return render_template(
+        "public/como_llegar.html",
+        huancayoga_lat=app.config["HUANCAYOGA_LAT"],
+        huancayoga_lon=app.config["HUANCAYOGA_LON"],
+    )
+
+
+@app.route("/api/rutas/huancayoga", methods=["POST"])
+def api_ruta_huancayoga():
+    datos = request.get_json(silent=True) or {}
+    modo = str(datos.get("modo", "")).strip().lower()
+
+    if modo not in PERFILES_RUTA_ORS:
+        return {
+            "ok": False,
+            "mensaje": "Selecciona caminata, bicicleta o automóvil.",
+        }, 400
+
+    try:
+        latitud = float(datos.get("latitud"))
+        longitud = float(datos.get("longitud"))
+    except (TypeError, ValueError):
+        return {
+            "ok": False,
+            "mensaje": "No pudimos leer tu ubicación actual.",
+        }, 400
+
+    if (
+        not math.isfinite(latitud)
+        or not math.isfinite(longitud)
+        or not -90 <= latitud <= 90
+        or not -180 <= longitud <= 180
+    ):
+        return {
+            "ok": False,
+            "mensaje": "Las coordenadas recibidas no son válidas.",
+        }, 400
+
+    destino_latitud = app.config["HUANCAYOGA_LAT"]
+    destino_longitud = app.config["HUANCAYOGA_LON"]
+    distancia_directa = distancia_haversine_km(
+        latitud,
+        longitud,
+        destino_latitud,
+        destino_longitud,
+    )
+
+    if distancia_directa > 500:
+        return {
+            "ok": False,
+            "mensaje": "Para recorridos mayores a 500 km, abre la ruta directamente en Google Maps.",
+        }, 400
+
+    clave_ors = app.config.get("ORS_API_KEY")
+    if not clave_ors:
+        return {
+            "ok": False,
+            "mensaje": "El servicio de rutas aún no está configurado.",
+        }, 503
+
+    ahora = time.monotonic()
+    clave_cache = (round(latitud, 4), round(longitud, 4), modo)
+    ruta_guardada = cache_rutas_huancayoga.get(clave_cache)
+
+    if ruta_guardada and ahora - ruta_guardada["creada"] < 90:
+        return {"ok": True, "ruta": ruta_guardada["ruta"], "cache": True}
+
+    if not solicitud_ruta_permitida():
+        return {
+            "ok": False,
+            "mensaje": "Se realizaron demasiadas consultas. Espera un minuto e inténtalo nuevamente.",
+        }, 429
+
+    perfil_ors = PERFILES_RUTA_ORS[modo]
+
+    try:
+        respuesta = requests.post(
+            f"https://api.openrouteservice.org/v2/directions/{perfil_ors}/geojson",
+            headers={
+                "Authorization": clave_ors,
+                "Content-Type": "application/json",
+                "Accept": "application/geo+json, application/json",
+            },
+            json={
+                "coordinates": [
+                    [longitud, latitud],
+                    [destino_longitud, destino_latitud],
+                ],
+                "instructions": True,
+                "language": "es",
+            },
+            timeout=app.config["ORS_TIMEOUT"],
+        )
+
+        if respuesta.status_code in (401, 403):
+            print("OpenRouteService rechazó la credencial configurada.")
+            return {
+                "ok": False,
+                "mensaje": "El servicio de rutas necesita ser configurado nuevamente.",
+            }, 503
+
+        if respuesta.status_code == 429:
+            return {
+                "ok": False,
+                "mensaje": "El servicio de rutas alcanzó temporalmente su límite. Intenta en unos minutos.",
+            }, 429
+
+        respuesta.raise_for_status()
+        contenido = respuesta.json()
+        elementos = contenido.get("features") or []
+
+        if not elementos:
+            return {
+                "ok": False,
+                "mensaje": "No encontramos una ruta disponible desde tu ubicación.",
+            }, 404
+
+        elemento = elementos[0]
+        propiedades = elemento.get("properties") or {}
+        resumen = propiedades.get("summary") or {}
+        segmentos = propiedades.get("segments") or []
+        pasos = segmentos[0].get("steps", []) if segmentos else []
+
+        ruta = {
+            "geometria": elemento.get("geometry"),
+            "distancia_m": round(float(resumen.get("distance", 0)), 1),
+            "duracion_s": round(float(resumen.get("duration", 0)), 1),
+            "modo": modo,
+            "destino": {
+                "latitud": destino_latitud,
+                "longitud": destino_longitud,
+            },
+            "instrucciones": [
+                {
+                    "texto": str(paso.get("instruction") or "Continúa por la ruta indicada."),
+                    "distancia_m": round(float(paso.get("distance", 0)), 1),
+                    "duracion_s": round(float(paso.get("duration", 0)), 1),
+                }
+                for paso in pasos
+            ],
+        }
+
+        cache_rutas_huancayoga[clave_cache] = {
+            "creada": ahora,
+            "ruta": ruta,
+        }
+        return {"ok": True, "ruta": ruta, "cache": False}
+
+    except requests.Timeout:
+        return {
+            "ok": False,
+            "mensaje": "El cálculo de la ruta está tardando demasiado. Intenta nuevamente.",
+        }, 504
+    except (requests.RequestException, ValueError, TypeError, KeyError) as error:
+        print(f"Error al consultar OpenRouteService: {error}")
+        return {
+            "ok": False,
+            "mensaje": "No pudimos calcular la ruta en este momento.",
+        }, 502
 
 
 @app.route("/check-db")
