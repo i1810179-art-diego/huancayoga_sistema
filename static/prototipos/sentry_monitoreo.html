@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prototipo de monitoreo | Huancayoga</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=Nunito+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --green-950: #102d23;
+            --green-900: #18382c;
+            --green-800: #244b3b;
+            --green-600: #4f826a;
+            --green-100: #e2eee7;
+            --cream: #f5f0e7;
+            --paper: #fffdf9;
+            --line: #e4ddd2;
+            --text: #29362f;
+            --muted: #6b7770;
+            --red: #b34b42;
+            --red-soft: #f8e7e4;
+            --amber: #b67729;
+            --amber-soft: #f8edda;
+            --blue: #49798b;
+            --shadow: 0 18px 45px rgba(28, 57, 45, .12);
+        }
+
+        * { box-sizing: border-box; }
+        html, body { margin: 0; min-height: 100%; }
+
+        body {
+            color: var(--text);
+            background: var(--cream);
+            font-family: "Nunito Sans", Arial, sans-serif;
+        }
+
+        button { font: inherit; }
+
+        .app-shell {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 245px minmax(0, 1fr);
+        }
+
+        .sidebar {
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 25px 18px;
+            color: white;
+            background:
+                radial-gradient(circle at 50% -10%, rgba(99, 155, 127, .28), transparent 18rem),
+                var(--green-950);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            padding: 0 8px 24px;
+            font-family: "Lora", Georgia, serif;
+            font-size: 19px;
+            font-weight: 700;
+        }
+
+        .brand-mark {
+            width: 36px;
+            height: 36px;
+            display: grid;
+            place-items: center;
+            border: 1px solid rgba(255,255,255,.24);
+            border-radius: 12px;
+            background: rgba(255,255,255,.08);
+        }
+
+        .brand-mark svg { width: 19px; }
+
+        .workspace {
+            margin-bottom: 19px;
+            padding: 13px;
+            border: 1px solid rgba(255,255,255,.1);
+            border-radius: 13px;
+            background: rgba(255,255,255,.05);
+        }
+
+        .workspace small { display: block; color: #9fb7ac; font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+        .workspace strong { display: block; margin-top: 4px; font-size: 13px; }
+
+        .nav-label {
+            margin: 4px 10px 7px;
+            color: #789287;
+            font-size: 9px;
+            font-weight: 900;
+            letter-spacing: .13em;
+            text-transform: uppercase;
+        }
+
+        .nav-list { display: grid; gap: 5px; }
+
+        .nav-item {
+            width: 100%;
+            min-height: 43px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 12px;
+            border: 0;
+            border-radius: 10px;
+            color: #b8c9c1;
+            background: transparent;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 700;
+            text-align: left;
+        }
+
+        .nav-item svg { width: 17px; }
+        .nav-item.active { color: white; background: rgba(112, 170, 142, .18); }
+        .nav-item:hover { color: white; background: rgba(255,255,255,.07); }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 14px 11px 2px;
+            border-top: 1px solid rgba(255,255,255,.1);
+        }
+
+        .privacy-state {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #aac2b7;
+            font-size: 11px;
+            line-height: 1.35;
+        }
+
+        .privacy-dot { width: 8px; height: 8px; border-radius: 50%; background: #70b28f; box-shadow: 0 0 0 4px rgba(112,178,143,.12); }
+
+        .main { min-width: 0; padding: 26px 30px 38px; }
+
+        .prototype-banner {
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 10px 14px;
+            border: 1px solid #e3cca0;
+            border-radius: 11px;
+            color: #765322;
+            background: #fbf2de;
+            font-size: 12px;
+        }
+
+        .prototype-banner strong { font-weight: 900; }
+
+        .prototype-tag {
+            flex: 0 0 auto;
+            padding: 5px 8px;
+            border-radius: 999px;
+            color: #7d541a;
+            background: #f0ddb8;
+            font-size: 9px;
+            font-weight: 900;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+
+        .page-heading {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 25px;
+            margin-bottom: 22px;
+        }
+
+        .eyebrow { margin: 0 0 5px; color: var(--green-600); font-size: 11px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+
+        h1 {
+            margin: 0;
+            color: var(--green-900);
+            font-family: "Lora", Georgia, serif;
+            font-size: clamp(29px, 3vw, 40px);
+            letter-spacing: -.035em;
+        }
+
+        .heading-actions { display: flex; align-items: center; gap: 9px; }
+
+        .environment {
+            min-height: 39px;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 0 12px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            color: var(--green-800);
+            background: var(--paper);
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .environment::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #64a682; }
+
+        .test-button {
+            min-height: 39px;
+            padding: 0 14px;
+            border: 0;
+            border-radius: 10px;
+            color: white;
+            background: var(--green-800);
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .test-button:hover { background: var(--green-950); }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 13px;
+            margin-bottom: 18px;
+        }
+
+        .metric {
+            position: relative;
+            overflow: hidden;
+            min-height: 116px;
+            padding: 17px;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            background: var(--paper);
+            box-shadow: 0 8px 24px rgba(36,75,59,.06);
+        }
+
+        .metric::after {
+            content: "";
+            position: absolute;
+            width: 75px;
+            height: 75px;
+            right: -22px;
+            bottom: -28px;
+            border-radius: 50%;
+            background: var(--green-100);
+        }
+
+        .metric.alert::after { background: var(--red-soft); }
+        .metric.warning::after { background: var(--amber-soft); }
+        .metric small { display: block; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+        .metric strong { display: block; margin-top: 8px; color: var(--green-900); font-family: "Lora", Georgia, serif; font-size: 27px; line-height: 1; }
+        .metric.alert strong { color: var(--red); }
+        .metric-note { display: block; margin-top: 8px; color: var(--muted); font-size: 10px; }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.25fr) minmax(340px, .75fr);
+            gap: 16px;
+            align-items: start;
+        }
+
+        .panel {
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            background: var(--paper);
+            box-shadow: var(--shadow);
+        }
+
+        .panel-header {
+            min-height: 67px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 14px 17px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .panel-title h2 { margin: 0; color: var(--green-900); font-family: "Lora", Georgia, serif; font-size: 18px; }
+        .panel-title p { margin: 3px 0 0; color: var(--muted); font-size: 11px; }
+
+        .filter-tabs { display: flex; gap: 4px; padding: 4px; border-radius: 10px; background: #f2eee6; }
+
+        .filter-button {
+            min-height: 29px;
+            padding: 0 9px;
+            border: 0;
+            border-radius: 7px;
+            color: var(--muted);
+            background: transparent;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 800;
+        }
+
+        .filter-button.active { color: var(--green-800); background: white; box-shadow: 0 3px 8px rgba(36,75,59,.09); }
+
+        .issue-list { display: grid; }
+
+        .issue-row {
+            width: 100%;
+            min-height: 98px;
+            display: grid;
+            grid-template-columns: 34px minmax(0, 1fr) 95px;
+            gap: 12px;
+            align-items: start;
+            padding: 16px 17px;
+            border: 0;
+            border-bottom: 1px solid #eee8df;
+            color: inherit;
+            background: transparent;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .issue-row:last-child { border-bottom: 0; }
+        .issue-row:hover { background: #fbf9f4; }
+        .issue-row.active { box-shadow: inset 3px 0 var(--green-600); background: #f3f8f5; }
+
+        .level-icon {
+            width: 31px;
+            height: 31px;
+            display: grid;
+            place-items: center;
+            border-radius: 10px;
+            color: var(--red);
+            background: var(--red-soft);
+            font-size: 15px;
+            font-weight: 900;
+        }
+
+        .level-icon.warning { color: var(--amber); background: var(--amber-soft); }
+        .level-icon.info { color: var(--blue); background: #e5f0f3; }
+
+        .issue-main strong { display: block; color: var(--green-900); font-size: 13px; line-height: 1.35; }
+        .issue-main p { margin: 4px 0 7px; color: var(--muted); font-size: 11px; }
+        .issue-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+        .issue-tag { padding: 3px 6px; border-radius: 6px; color: #587067; background: #edf3ef; font-size: 8px; font-weight: 900; text-transform: uppercase; }
+
+        .issue-count { text-align: right; }
+        .issue-count strong { display: block; color: var(--green-900); font-size: 14px; }
+        .issue-count small { color: var(--muted); font-size: 9px; }
+
+        .detail-panel { position: sticky; top: 20px; }
+
+        .detail-head {
+            padding: 18px;
+            border-bottom: 1px solid var(--line);
+            background: linear-gradient(145deg, #f3f8f5, #fffdf9);
+        }
+
+        .detail-status { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+        .level-badge { padding: 5px 8px; border-radius: 999px; color: var(--red); background: var(--red-soft); font-size: 9px; font-weight: 900; text-transform: uppercase; }
+        .detail-id { color: var(--muted); font-family: monospace; font-size: 10px; }
+        .detail-head h2 { margin: 0; color: var(--green-900); font-family: "Lora", Georgia, serif; font-size: 20px; line-height: 1.25; }
+        .detail-head p { margin: 7px 0 0; color: var(--muted); font-size: 11px; }
+
+        .detail-body { padding: 17px; }
+        .detail-section { margin-bottom: 18px; }
+        .detail-section:last-child { margin-bottom: 0; }
+        .detail-section h3 { margin: 0 0 9px; color: var(--green-900); font-size: 10px; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
+
+        .context-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+        .context-item { padding: 9px; border-radius: 9px; background: #f5f1ea; }
+        .context-item small { display: block; color: var(--muted); font-size: 8px; text-transform: uppercase; }
+        .context-item strong { display: block; margin-top: 2px; color: var(--green-900); font-size: 10px; }
+
+        .stack {
+            overflow-x: auto;
+            padding: 12px;
+            border-radius: 11px;
+            color: #cce2d6;
+            background: #172b23;
+            font: 10px/1.65 Consolas, monospace;
+            white-space: pre;
+        }
+
+        .stack .highlight { color: #ffbf9f; }
+
+        .breadcrumb-list { display: grid; gap: 6px; }
+        .breadcrumb { display: grid; grid-template-columns: 48px 1fr; gap: 8px; color: var(--muted); font-size: 9px; }
+        .breadcrumb time { color: #8a958f; font-family: monospace; }
+        .breadcrumb strong { color: #425249; font-weight: 700; }
+
+        .privacy-note {
+            display: flex;
+            gap: 9px;
+            margin-top: 13px;
+            padding: 10px;
+            border-radius: 10px;
+            color: #587067;
+            background: var(--green-100);
+            font-size: 9px;
+            line-height: 1.4;
+        }
+
+        .privacy-note svg { flex: 0 0 auto; width: 14px; }
+
+        .toast {
+            position: fixed;
+            z-index: 20;
+            left: 50%;
+            bottom: 24px;
+            max-width: calc(100% - 30px);
+            padding: 12px 17px;
+            border-radius: 11px;
+            color: white;
+            background: var(--green-950);
+            box-shadow: 0 14px 30px rgba(16,45,35,.3);
+            font-size: 12px;
+            font-weight: 700;
+            opacity: 0;
+            pointer-events: none;
+            transform: translate(-50%, 12px);
+            transition: .22s ease;
+        }
+
+        .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+        @media (max-width: 1080px) {
+            .app-shell { grid-template-columns: 78px minmax(0, 1fr); }
+            .sidebar { padding: 22px 12px; }
+            .brand { justify-content: center; padding-inline: 0; }
+            .brand > span:last-child, .workspace, .nav-label, .nav-item span, .sidebar-footer { display: none; }
+            .nav-item { justify-content: center; padding: 0; }
+            .metrics { grid-template-columns: repeat(2, 1fr); }
+            .content-grid { grid-template-columns: 1fr; }
+            .detail-panel { position: static; }
+        }
+
+        @media (max-width: 680px) {
+            .app-shell { display: block; }
+            .sidebar { position: static; width: 100%; height: auto; padding: 12px 16px; flex-direction: row; align-items: center; justify-content: space-between; }
+            .brand { padding: 0; }
+            .brand > span:last-child { display: inline; }
+            .nav-list { display: flex; }
+            .nav-item { width: 40px; min-height: 40px; }
+            .main { padding: 19px 13px 30px; }
+            .prototype-banner, .page-heading { align-items: flex-start; flex-direction: column; }
+            .heading-actions { width: 100%; }
+            .environment, .test-button { flex: 1; justify-content: center; }
+            .metrics { grid-template-columns: 1fr 1fr; gap: 9px; }
+            .metric { min-height: 102px; }
+            .issue-row { grid-template-columns: 30px minmax(0,1fr); }
+            .issue-count { display: none; }
+            .panel-header { align-items: flex-start; flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="brand">
+                <span class="brand-mark">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18M5.6 6.5 18.4 17.5M18.4 6.5 5.6 17.5"/><circle cx="12" cy="12" r="8"/></svg>
+                </span>
+                <span>Huancayoga</span>
+            </div>
+
+            <div class="workspace">
+                <small>Proyecto monitorizado</small>
+                <strong>huancayoga-flask</strong>
+            </div>
+
+            <p class="nav-label">Observabilidad</p>
+            <nav class="nav-list" aria-label="Menú del prototipo">
+                <button class="nav-item active" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M8 16V9M12 16V6M16 16v-4"/></svg>
+                    <span>Resumen</span>
+                </button>
+                <button class="nav-item" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 17h.01"/></svg>
+                    <span>Errores</span>
+                </button>
+                <button class="nav-item" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 18V6M4 18h16"/><path d="m7 14 4-4 3 2 5-6"/></svg>
+                    <span>Rendimiento</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="privacy-state"><span class="privacy-dot"></span><span>Vista privada<br>solo para la dueña</span></div>
+            </div>
+        </aside>
+
+        <main class="main">
+            <div class="prototype-banner">
+                <span><strong>Así funcionaría el monitoreo.</strong> Los datos mostrados son simulados y todavía no se envía información a Sentry.</span>
+                <span class="prototype-tag">Prototipo</span>
+            </div>
+
+            <header class="page-heading">
+                <div>
+                    <p class="eyebrow">Salud del sistema</p>
+                    <h1>Centro de errores</h1>
+                </div>
+                <div class="heading-actions">
+                    <span class="environment">Producción · Render</span>
+                    <button class="test-button" id="test-button" type="button">Enviar error de prueba</button>
+                </div>
+            </header>
+
+            <section class="metrics" aria-label="Resumen del sistema">
+                <article class="metric"><small>Disponibilidad</small><strong>99.96%</strong><span class="metric-note">Últimos 7 días</span></article>
+                <article class="metric alert"><small>Errores sin resolver</small><strong>2</strong><span class="metric-note">1 requiere atención</span></article>
+                <article class="metric warning"><small>Eventos · 24 horas</small><strong>7</strong><span class="metric-note">−18% frente a ayer</span></article>
+                <article class="metric"><small>Última revisión</small><strong>Ahora</strong><span class="metric-note">SDK conectado</span></article>
+            </section>
+
+            <section class="content-grid">
+                <article class="panel">
+                    <header class="panel-header">
+                        <div class="panel-title"><h2>Problemas recientes</h2><p>Agrupados automáticamente por causa</p></div>
+                        <div class="filter-tabs" aria-label="Filtros de errores">
+                            <button class="filter-button active" data-filter="all" type="button">Todos</button>
+                            <button class="filter-button" data-filter="error" type="button">Errores</button>
+                            <button class="filter-button" data-filter="warning" type="button">Avisos</button>
+                        </div>
+                    </header>
+
+                    <div class="issue-list" id="issue-list">
+                        <button class="issue-row active" data-issue="database" data-level="error" type="button">
+                            <span class="level-icon">!</span>
+                            <span class="issue-main">
+                                <strong>OperationalError: conexión MySQL interrumpida</strong>
+                                <p>POST /reservar · app.py · registrar reserva</p>
+                                <span class="issue-tags"><span class="issue-tag">producción</span><span class="issue-tag">backend</span><span class="issue-tag">base de datos</span></span>
+                            </span>
+                            <span class="issue-count"><strong>4 eventos</strong><small>hace 8 min</small></span>
+                        </button>
+
+                        <button class="issue-row" data-issue="pexels" data-level="warning" type="button">
+                            <span class="level-icon warning">⌛</span>
+                            <span class="issue-main">
+                                <strong>Timeout consultando imágenes de Pexels</strong>
+                                <p>GET /api/admin/productos/imagenes</p>
+                                <span class="issue-tags"><span class="issue-tag">producción</span><span class="issue-tag">api externa</span></span>
+                            </span>
+                            <span class="issue-count"><strong>2 eventos</strong><small>hace 42 min</small></span>
+                        </button>
+
+                        <button class="issue-row" data-issue="route" data-level="warning" type="button">
+                            <span class="level-icon warning">⌁</span>
+                            <span class="issue-main">
+                                <strong>OpenRouteService respondió demasiado lento</strong>
+                                <p>POST /api/rutas/huancayoga</p>
+                                <span class="issue-tags"><span class="issue-tag">producción</span><span class="issue-tag">ubicación</span></span>
+                            </span>
+                            <span class="issue-count"><strong>1 evento</strong><small>hace 2 h</small></span>
+                        </button>
+
+                        <button class="issue-row" data-issue="client" data-level="info" type="button">
+                            <span class="level-icon info">i</span>
+                            <span class="issue-main">
+                                <strong>Solicitud inválida controlada correctamente</strong>
+                                <p>POST /cliente/registro · respuesta 400</p>
+                                <span class="issue-tags"><span class="issue-tag">controlado</span><span class="issue-tag">cliente</span></span>
+                            </span>
+                            <span class="issue-count"><strong>3 eventos</strong><small>ayer</small></span>
+                        </button>
+                    </div>
+                </article>
+
+                <aside class="panel detail-panel" aria-live="polite">
+                    <div class="detail-head">
+                        <div class="detail-status"><span class="level-badge" id="detail-level">Error</span><span class="detail-id" id="detail-id">HUA-FLASK-01</span></div>
+                        <h2 id="detail-title">Conexión MySQL interrumpida</h2>
+                        <p id="detail-subtitle">El servidor no pudo guardar una reserva durante algunos segundos.</p>
+                    </div>
+                    <div class="detail-body">
+                        <section class="detail-section">
+                            <h3>Contexto</h3>
+                            <div class="context-grid">
+                                <div class="context-item"><small>Entorno</small><strong>Producción</strong></div>
+                                <div class="context-item"><small>Servidor</small><strong>Render</strong></div>
+                                <div class="context-item"><small>Ruta</small><strong id="detail-route">POST /reservar</strong></div>
+                                <div class="context-item"><small>Versión</small><strong>main · actual</strong></div>
+                            </div>
+                        </section>
+
+                        <section class="detail-section">
+                            <h3>Ubicación del error</h3>
+                            <div class="stack" id="detail-stack">app.py, línea 758
+  cur.execute(...)
+<span class="highlight">OperationalError: lost connection</span></div>
+                        </section>
+
+                        <section class="detail-section">
+                            <h3>Actividad anterior</h3>
+                            <div class="breadcrumb-list" id="detail-breadcrumbs">
+                                <div class="breadcrumb"><time>10:42:11</time><strong>Usuario abrió /reservar</strong></div>
+                                <div class="breadcrumb"><time>10:42:18</time><strong>Formulario validado</strong></div>
+                                <div class="breadcrumb"><time>10:42:19</time><strong>MySQL dejó de responder</strong></div>
+                            </div>
+                        </section>
+
+                        <div class="privacy-note">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+                            Sentry se configurará sin enviar contraseñas, formularios, ubicación GPS ni datos personales por defecto.
+                        </div>
+                    </div>
+                </aside>
+            </section>
+        </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+        const issueDetails = {
+            database: {
+                level: 'Error', id: 'HUA-FLASK-01', title: 'Conexión MySQL interrumpida',
+                subtitle: 'El servidor no pudo guardar una reserva durante algunos segundos.', route: 'POST /reservar',
+                stack: 'app.py, línea 758\n  cur.execute(...)\nOperationalError: lost connection',
+                breadcrumbs: ['Usuario abrió /reservar', 'Formulario validado', 'MySQL dejó de responder']
+            },
+            pexels: {
+                level: 'Aviso', id: 'HUA-FLASK-02', title: 'Tiempo de espera agotado en Pexels',
+                subtitle: 'La búsqueda de imágenes tardó más del límite configurado.', route: 'GET /api/admin/productos/imagenes',
+                stack: 'app.py, línea 840\n  requests.get(...)\nTimeout: request exceeded 12s',
+                breadcrumbs: ['Administradora abrió Productos', 'Buscó “aceite relajante”', 'Pexels agotó el tiempo']
+            },
+            route: {
+                level: 'Aviso', id: 'HUA-FLASK-03', title: 'Ruta externa con respuesta lenta',
+                subtitle: 'OpenRouteService no respondió dentro del tiempo esperado.', route: 'POST /api/rutas/huancayoga',
+                stack: 'app.py, línea 662\n  requests.post(...)\nTimeout: route calculation',
+                breadcrumbs: ['Usuario permitió ubicación', 'Seleccionó bicicleta', 'ORS agotó el tiempo']
+            },
+            client: {
+                level: 'Información', id: 'HUA-FLASK-04', title: 'Solicitud inválida controlada',
+                subtitle: 'El sistema rechazó correctamente un formulario incompleto.', route: 'POST /cliente/registro',
+                stack: 'app.py, línea 1413\n  return validation_error\nHTTP 400 handled',
+                breadcrumbs: ['Usuario abrió registro', 'Formulario incompleto', 'Validación respondió 400']
+            }
+        };
+
+        function showIssue(key) {
+            const detail = issueDetails[key];
+            if (!detail) return;
+
+            document.querySelectorAll('.issue-row').forEach(row => row.classList.toggle('active', row.dataset.issue === key));
+            document.getElementById('detail-level').textContent = detail.level;
+            document.getElementById('detail-id').textContent = detail.id;
+            document.getElementById('detail-title').textContent = detail.title;
+            document.getElementById('detail-subtitle').textContent = detail.subtitle;
+            document.getElementById('detail-route').textContent = detail.route;
+            document.getElementById('detail-stack').textContent = detail.stack;
+
+            const list = document.getElementById('detail-breadcrumbs');
+            list.replaceChildren();
+            detail.breadcrumbs.forEach((text, index) => {
+                const item = document.createElement('div');
+                item.className = 'breadcrumb';
+                const time = document.createElement('time');
+                time.textContent = `10:42:${11 + index * 5}`;
+                const message = document.createElement('strong');
+                message.textContent = text;
+                item.append(time, message);
+                list.appendChild(item);
+            });
+        }
+
+        document.querySelectorAll('.issue-row').forEach(row => row.addEventListener('click', () => showIssue(row.dataset.issue)));
+
+        document.querySelectorAll('.filter-button').forEach(button => button.addEventListener('click', () => {
+            document.querySelectorAll('.filter-button').forEach(item => item.classList.toggle('active', item === button));
+            document.querySelectorAll('.issue-row').forEach(row => {
+                row.hidden = button.dataset.filter !== 'all' && row.dataset.level !== button.dataset.filter;
+            });
+        }));
+
+        document.querySelectorAll('.nav-item').forEach(button => button.addEventListener('click', () => {
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('active', item === button));
+        }));
+
+        document.getElementById('test-button').addEventListener('click', () => {
+            const toast = document.getElementById('toast');
+            toast.textContent = 'Prototipo: con Sentry conectado, aquí enviaríamos un evento de prueba.';
+            toast.classList.add('show');
+            window.setTimeout(() => toast.classList.remove('show'), 3200);
+        });
+    </script>
+</body>
+</html>

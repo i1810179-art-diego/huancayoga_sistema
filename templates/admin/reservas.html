@@ -5,38 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Reservas - Panel Huancayoga</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/estilos.css') }}">
 </head>
 <body class="admin-body">
     <nav class="navbar navbar-dark admin-navbar">
         <div class="container">
             <a class="navbar-brand fw-bold" href="/admin/dashboard">Panel Huancayoga</a>
-            <div>
+            <div class="admin-nav-actions">
                 <a href="/admin/dashboard" class="btn btn-light btn-sm">Dashboard</a>
                 <a href="/admin/reservas" class="btn btn-warning btn-sm" aria-current="page">Reservas</a>
                 <a href="/admin/pedidos" class="btn btn-light btn-sm">Pedidos</a>
                 <a href="/admin/productos" class="btn btn-light btn-sm">Productos</a>
-                <a href="/" class="btn btn-outline-light btn-sm">Ver web</a>
                 <a href="/admin/logout" class="btn btn-danger btn-sm">Salir</a>
             </div>
         </div>
     </nav>
 
-    {% set resumen = namespace(pendientes=0, confirmadas=0, atendidas=0) %}
+    {% set resumen = namespace(pendientes=0, confirmadas=0, atendidas=0, institucionales=0, asistentes=0) %}
     {% for reserva in reservas %}
-        {% if reserva[8] == 'pendiente' %}{% set resumen.pendientes = resumen.pendientes + 1 %}{% endif %}
-        {% if reserva[8] == 'confirmada' %}{% set resumen.confirmadas = resumen.confirmadas + 1 %}{% endif %}
-        {% if reserva[8] == 'atendida' %}{% set resumen.atendidas = resumen.atendidas + 1 %}{% endif %}
+        {% if reserva.estado == 'pendiente' %}{% set resumen.pendientes = resumen.pendientes + 1 %}{% endif %}
+        {% if reserva.estado == 'confirmada' %}{% set resumen.confirmadas = resumen.confirmadas + 1 %}{% endif %}
+        {% if reserva.estado == 'atendida' %}{% set resumen.atendidas = resumen.atendidas + 1 %}{% endif %}
+        {% if reserva.tipo_reserva == 'institucional' %}{% set resumen.institucionales = resumen.institucionales + 1 %}{% endif %}
+        {% if reserva.estado in ['pendiente', 'confirmada'] %}{% set resumen.asistentes = resumen.asistentes + reserva.cantidad_personas %}{% endif %}
     {% endfor %}
 
-    <main class="container admin-operations-page">
+    <main class="container admin-operations-page admin-reservations-page">
         <header class="admin-operations-header">
             <div>
-                <span class="admin-small-title">Agenda y atención</span>
+                <span class="admin-small-title">Agenda y programas</span>
                 <h1>Reservas</h1>
-                <p>Organiza las citas y acompaña cada solicitud hasta completar la atención.</p>
+                <p>Gestiona clases regulares, grupos e instituciones desde una agenda sin cruces.</p>
             </div>
-            <a href="/admin/dashboard" class="btn btn-outline-secondary">← Volver al resumen</a>
+            <div class="admin-header-actions">
+                <a href="{{ url_for('admin_google_calendar') }}" class="btn btn-outline-success"><i class="bi bi-calendar2-check"></i> Google Calendar</a>
+                <a href="/admin/dashboard" class="btn btn-outline-secondary">← Volver al resumen</a>
+            </div>
         </header>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -48,29 +53,18 @@
         {% endwith %}
 
         <section class="admin-operation-metrics" aria-label="Resumen de reservas">
-            <article class="operation-metric operation-metric-total">
-                <span>Total</span><strong>{{ reservas|length }}</strong><small>reservas registradas</small>
-            </article>
-            <article class="operation-metric operation-metric-pending">
-                <span>Pendientes</span><strong>{{ resumen.pendientes }}</strong><small>requieren revisión</small>
-            </article>
-            <article class="operation-metric operation-metric-confirmed">
-                <span>Confirmadas</span><strong>{{ resumen.confirmadas }}</strong><small>próximas citas</small>
-            </article>
-            <article class="operation-metric operation-metric-complete">
-                <span>Atendidas</span><strong>{{ resumen.atendidas }}</strong><small>servicios completados</small>
-            </article>
+            <article class="operation-metric operation-metric-total"><span>Solicitudes</span><strong>{{ reservas|length }}</strong><small>reservas registradas</small></article>
+            <article class="operation-metric operation-metric-pending"><span>Pendientes</span><strong>{{ resumen.pendientes }}</strong><small>requieren revisión</small></article>
+            <article class="operation-metric operation-metric-confirmed"><span>Confirmadas</span><strong>{{ resumen.confirmadas }}</strong><small>{{ resumen.asistentes }} asistentes activos</small></article>
+            <article class="operation-metric operation-metric-complete"><span>Programas privados</span><strong>{{ resumen.institucionales }}</strong><small>grupos e instituciones</small></article>
         </section>
 
-        <section class="admin-operation-panel" aria-labelledby="reservations-title">
+        <section class="admin-operation-panel admin-reservation-manager" aria-labelledby="reservations-title">
             <header class="admin-operation-panel-header">
-                <div>
-                    <h2 id="reservations-title">Agenda de reservas</h2>
-                    <p id="reservation-result-count">{{ reservas|length }} registros</p>
-                </div>
+                <div><h2 id="reservations-title">Agenda de solicitudes</h2><p id="reservation-result-count">{{ reservas|length }} registros</p></div>
                 <div class="admin-operation-filters">
                     <label class="visually-hidden" for="reservation-search">Buscar reserva</label>
-                    <input type="search" id="reservation-search" class="form-control" placeholder="Buscar cliente, servicio o celular">
+                    <input type="search" id="reservation-search" class="form-control" placeholder="Buscar cliente u organización">
                     <label class="visually-hidden" for="reservation-status">Filtrar por estado</label>
                     <select id="reservation-status" class="form-select">
                         <option value="">Todos los estados</option>
@@ -82,85 +76,100 @@
                 </div>
             </header>
 
-            <div class="table-responsive admin-operation-table-wrap">
-                <table class="table align-middle admin-operation-table">
-                    <thead>
-                        <tr>
-                            <th scope="col">Cliente</th>
-                            <th scope="col">Servicio</th>
-                            <th scope="col">Fecha y hora</th>
-                            <th scope="col">Comentario</th>
-                            <th scope="col">Estado</th>
-                            <th scope="col"><span class="visually-hidden">Acciones</span></th>
-                        </tr>
-                    </thead>
-                    <tbody id="reservation-rows">
-                        {% if reservas %}
-                            {% for r in reservas %}
-                                <tr data-operation-row data-status="{{ r[8] }}" data-search="{{ r[1] }} {{ r[2] }} {{ r[3] }} {{ r[4] }}">
-                                    <td data-label="Cliente">
-                                        <div class="operation-person">
-                                            <span class="operation-avatar" aria-hidden="true">{{ r[1][0] if r[1] else 'H' }}</span>
-                                            <div>
-                                                <strong>{{ r[1] }}</strong>
-                                                <a href="tel:{{ r[2] }}">{{ r[2] }}</a>
-                                                {% if r[3] %}<a href="mailto:{{ r[3] }}">{{ r[3] }}</a>{% endif %}
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td data-label="Servicio"><strong class="operation-service">{{ r[4] }}</strong><small>Reserva #{{ r[0] }}</small></td>
-                                    <td data-label="Fecha y hora">
-                                        <div class="operation-date">
-                                            <strong>{{ r[5].strftime('%d/%m/%Y') if r[5] and r[5].strftime is defined else r[5] }}</strong>
-                                            <span>{{ r[6] }}</span>
-                                        </div>
-                                    </td>
-                                    <td data-label="Comentario"><p class="operation-comment">{{ r[7] or 'Sin comentario adicional' }}</p></td>
-                                    <td data-label="Estado">
-                                        <span class="admin-status admin-status-{{ r[8] }}"><span aria-hidden="true">●</span> {{ r[8]|capitalize }}</span>
-                                    </td>
-                                    <td data-label="Acciones">
-                                        <div class="operation-actions">
-                                            {% if r[8] == 'pendiente' %}
-                                                <form method="POST" action="/admin/reserva/estado/{{ r[0] }}/confirmada">
-                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                    <button type="submit" class="btn btn-success btn-sm">Confirmar</button>
-                                                </form>
-                                            {% elif r[8] == 'confirmada' %}
-                                                <form method="POST" action="/admin/reserva/estado/{{ r[0] }}/atendida">
-                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                    <button type="submit" class="btn btn-success btn-sm">Marcar atendida</button>
-                                                </form>
-                                            {% else %}
-                                                <span class="operation-closed">Sin acciones pendientes</span>
-                                            {% endif %}
+            <div class="admin-reservation-tabs" role="group" aria-label="Tipo de reserva">
+                <button type="button" class="is-active" data-type-filter="all">Todas</button>
+                <button type="button" data-type-filter="regular">Clases regulares</button>
+                <button type="button" data-type-filter="institucional">Grupos e instituciones</button>
+            </div>
 
-                                            {% if r[8] in ['pendiente', 'confirmada'] %}
-                                                <details class="operation-more">
-                                                    <summary aria-label="Más acciones">•••</summary>
-                                                    <div>
-                                                        {% if r[8] == 'confirmada' %}
-                                                            <form method="POST" action="/admin/reserva/recordatorio/{{ r[0] }}">
-                                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                                <button type="submit">Enviar recordatorio</button>
-                                                            </form>
-                                                        {% endif %}
-                                                        <form method="POST" action="/admin/reserva/estado/{{ r[0] }}/cancelada" onsubmit="return confirm('¿Deseas cancelar esta reserva?')">
-                                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                            <button type="submit" class="is-danger">Cancelar reserva</button>
-                                                        </form>
-                                                    </div>
-                                                </details>
+            <div class="admin-reservation-list" id="reservation-rows">
+                {% if reservas %}
+                    {% for r in reservas %}
+                        {% set categoria = categorias_programa.get(r.categoria, 'Clase regular o grupal') %}
+                        {% set organizacion = r.nombre_organizacion or r.nombre_cliente %}
+                        <article class="admin-reservation-card{% if r.tipo_reserva == 'institucional' %} is-institutional{% endif %}"
+                                 data-operation-row
+                                 data-status="{{ r.estado }}"
+                                 data-type="{{ r.tipo_reserva }}"
+                                 data-search="{{ r.nombre_cliente }} {{ r.celular }} {{ r.correo or '' }} {{ r.servicio }} {{ organizacion }} {{ categoria }}">
+                            <div class="admin-reservation-identity">
+                                <span class="admin-reservation-avatar" aria-hidden="true">{{ '◇' if r.tipo_reserva == 'institucional' else (r.nombre_cliente[0] if r.nombre_cliente else 'H') }}</span>
+                                <div>
+                                    <div class="admin-reservation-tags">
+                                        <span class="admin-reservation-type">{{ 'Programa privado o institucional' if r.tipo_reserva == 'institucional' else 'Clase regular o grupal' }}</span>
+                                        <span class="admin-status admin-status-{{ r.estado }}"><span aria-hidden="true">●</span> {{ r.estado|capitalize }}</span>
+                                        {% if r.estado in ['confirmada', 'atendida'] %}
+                                            {% set calendar_sync = r.calendar_sync_estado or 'pendiente' %}
+                                            <span class="calendar-sync-badge is-{{ calendar_sync }}"><i class="bi bi-calendar2"></i> {{ calendar_sync|capitalize }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <h3>{{ categoria if r.tipo_reserva == 'institucional' else r.servicio }}</h3>
+                                    <strong class="admin-reservation-organization">{{ organizacion }}</strong>
+                                    {% if r.tipo_reserva == 'institucional' %}<p>Responsable: {{ r.nombre_cliente }}</p>{% elif r.cantidad_personas == 1 %}<p>Reserva individual</p>{% else %}<p>Cliente con {{ r.cantidad_personas - 1 }} {{ 'invitado' if r.cantidad_personas == 2 else 'invitados' }}</p>{% endif %}
+                                    <div class="admin-reservation-contact"><a href="tel:{{ r.celular }}">{{ r.celular }}</a>{% if r.correo %}<a href="mailto:{{ r.correo }}">{{ r.correo }}</a>{% endif %}</div>
+                                </div>
+                            </div>
+
+                            <div class="admin-reservation-details">
+                                <div><span class="admin-detail-icon" aria-hidden="true">◷</span><p><strong>{{ r.fecha.strftime('%d/%m/%Y') if r.fecha and r.fecha.strftime is defined else r.fecha }} · {{ r.hora_texto }}</strong>{{ r.duracion_minutos }} minutos · {{ r.servicio }}</p></div>
+                                <div><span class="admin-detail-icon" aria-hidden="true">⌖</span><p><strong>{{ 'Instalaciones del cliente' if r.tipo_lugar == 'externo' else 'Local de Huancayoga' }}</strong>{{ r.direccion_externa or 'Huancayo' }}</p></div>
+                                <div class="{% if not r.necesidades_apoyo %}is-muted{% endif %}"><span class="admin-detail-icon" aria-hidden="true">i</span><p><strong>Necesidades de apoyo</strong>{{ r.necesidades_apoyo or 'Sin necesidades de apoyo registradas' }}</p></div>
+                                {% if r.rango_edad %}<div><span class="admin-detail-icon" aria-hidden="true">◎</span><p><strong>Rango de edad</strong>{{ r.rango_edad }}</p></div>{% endif %}
+                                {% if r.comentario %}<div><span class="admin-detail-icon" aria-hidden="true">✎</span><p><strong>Observaciones</strong>{{ r.comentario }}</p></div>{% endif %}
+                            </div>
+
+                            <div class="admin-reservation-capacity">
+                                <div><span>Ocupación</span><strong>{{ r.cantidad_personas }}/{{ max_asistentes }}</strong></div>
+                                <div class="admin-capacity-track"><i style="width: {{ ((r.cantidad_personas / max_asistentes) * 100)|round(1) }}%"></i></div>
+                                <small>{{ ((r.cantidad_personas / max_asistentes) * 100)|round|int }}% de capacidad</small>
+                            </div>
+
+                            <div class="operation-actions admin-reservation-actions">
+                                {% if r.estado == 'pendiente' %}
+                                    <form method="post" action="/admin/reserva/estado/{{ r.id }}/confirmada">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-success btn-sm">Confirmar</button>
+                                    </form>
+                                {% elif r.estado == 'confirmada' %}
+                                    <form method="post" action="/admin/reserva/estado/{{ r.id }}/atendida">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-success btn-sm">Marcar atendida</button>
+                                    </form>
+                                {% else %}
+                                    <span class="operation-closed">Sin acciones pendientes</span>
+                                {% endif %}
+
+                                {% if r.estado in ['pendiente', 'confirmada'] %}
+                                    <details class="operation-more">
+                                        <summary aria-label="Más acciones">•••</summary>
+                                        <div>
+                                            {% if r.estado == 'confirmada' %}
+                                                <form method="post" action="/admin/reserva/recordatorio/{{ r.id }}">
+                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                    <button type="submit">Enviar recordatorio</button>
+                                                </form>
+                                                {% if r.calendar_sync_estado in [none, 'pendiente', 'error'] %}
+                                                    <form method="post" action="{{ url_for('admin_reserva_sincronizar_calendario', reserva_id=r.id) }}">
+                                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                        <button type="submit">Reintentar Google Calendar</button>
+                                                    </form>
+                                                {% elif r.calendar_evento_url %}
+                                                    <a href="{{ r.calendar_evento_url }}" target="_blank" rel="noopener noreferrer">Ver en Google Calendar</a>
+                                                {% endif %}
                                             {% endif %}
+                                            <form method="post" action="/admin/reserva/estado/{{ r.id }}/cancelada" onsubmit="return confirm('¿Deseas cancelar esta reserva y liberar el horario?')">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="is-danger">Cancelar reserva</button>
+                                            </form>
                                         </div>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        {% else %}
-                            <tr><td colspan="6"><div class="admin-operation-empty"><span aria-hidden="true">◷</span><h3>No hay reservas registradas</h3><p>Las solicitudes de clientes aparecerán aquí.</p></div></td></tr>
-                        {% endif %}
-                    </tbody>
-                </table>
+                                    </details>
+                                {% endif %}
+                            </div>
+                        </article>
+                    {% endfor %}
+                {% else %}
+                    <div class="admin-operation-empty"><span aria-hidden="true">◷</span><h3>No hay reservas registradas</h3><p>Las solicitudes aparecerán aquí.</p></div>
+                {% endif %}
             </div>
             <div class="admin-operation-no-results d-none" id="reservation-no-results">No encontramos reservas con esos criterios.</div>
         </section>
@@ -171,9 +180,11 @@
             const search = document.getElementById('reservation-search');
             const status = document.getElementById('reservation-status');
             const rows = [...document.querySelectorAll('[data-operation-row]')];
+            const tabs = [...document.querySelectorAll('[data-type-filter]')];
             const counter = document.getElementById('reservation-result-count');
             const empty = document.getElementById('reservation-no-results');
             const normalize = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            let type = 'all';
 
             function filterRows() {
                 const term = normalize(search.value.trim());
@@ -181,13 +192,19 @@
                 rows.forEach(row => {
                     const matchesText = !term || normalize(row.dataset.search).includes(term);
                     const matchesStatus = !status.value || row.dataset.status === status.value;
-                    row.hidden = !(matchesText && matchesStatus);
+                    const matchesType = type === 'all' || row.dataset.type === type;
+                    row.hidden = !(matchesText && matchesStatus && matchesType);
                     if (!row.hidden) visible += 1;
                 });
                 counter.textContent = `${visible} ${visible === 1 ? 'registro' : 'registros'}`;
                 empty.classList.toggle('d-none', visible > 0 || rows.length === 0);
             }
 
+            tabs.forEach(tab => tab.addEventListener('click', () => {
+                type = tab.dataset.typeFilter;
+                tabs.forEach(item => item.classList.toggle('is-active', item === tab));
+                filterRows();
+            }));
             search.addEventListener('input', filterRows);
             status.addEventListener('change', filterRows);
         })();

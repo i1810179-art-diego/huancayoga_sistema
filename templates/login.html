@@ -10,6 +10,7 @@
     
     <!-- CSS propio -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/estilos.css') }}">
+    {% if turnstile_enabled %}<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>{% endif %}
 </head>
 <body>
 
@@ -54,6 +55,12 @@
                             <label class="form-label">Contraseña</label>
                             <input type="password" name="password" class="form-control" required>
                         </div>
+
+                        {% if turnstile_enabled %}
+                            <div class="cf-turnstile social-turnstile mb-3" data-sitekey="{{ turnstile_site_key }}" data-theme="light"></div>
+                        {% elif turnstile_requested %}
+                            <div class="alert alert-warning">Turnstile está activado pero faltan sus claves.</div>
+                        {% endif %}
 
                         <button type="submit" class="btn btn-success w-100">
                             Ingresar

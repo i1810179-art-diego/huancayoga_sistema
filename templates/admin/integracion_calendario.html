@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Google Calendar - Panel Huancayoga</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/estilos.css') }}">
+</head>
+<body class="admin-body">
+    <nav class="navbar navbar-dark admin-navbar">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="{{ url_for('admin_dashboard') }}">Panel Huancayoga</a>
+            <div class="admin-nav-actions">
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-light btn-sm">Dashboard</a>
+                <a href="{{ url_for('admin_reservas') }}" class="btn btn-light btn-sm">Reservas</a>
+                <a href="{{ url_for('admin_google_calendar') }}" class="btn btn-warning btn-sm" aria-current="page">Google Calendar</a>
+                <a href="{{ url_for('admin_logout') }}" class="btn btn-danger btn-sm">Salir</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container admin-operations-page calendar-integration-page">
+        <header class="admin-operations-header">
+            <div>
+                <span class="admin-small-title">Integración de agenda</span>
+                <h1>Google Calendar</h1>
+                <p>La agenda externa pertenece a la dueña. Los clientes nunca tienen acceso a este calendario.</p>
+            </div>
+            <a href="{{ url_for('admin_reservas') }}" class="btn btn-outline-secondary">← Volver a reservas</a>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <section class="calendar-connection-card {{ 'is-connected' if integracion else 'is-disconnected' }}">
+            <div class="calendar-brand" aria-hidden="true"><i class="bi bi-calendar2-check"></i></div>
+            <div class="calendar-connection-copy">
+                <div class="calendar-state-line">
+                    <span class="calendar-state-dot"></span>
+                    <span>{{ 'Conectado' if integracion else 'Sin conectar' }}</span>
+                </div>
+                <h2>{{ integracion.cuenta_email if integracion and integracion.cuenta_email else 'Agenda de la dueña de Huancayoga' }}</h2>
+                {% if integracion %}
+                    <p>Las reservas confirmadas se crean automáticamente; las canceladas se retiran y las atendidas se marcan como completadas.</p>
+                    <small>Calendario: {{ integracion.recurso_id }} · Última actualización: {{ integracion.actualizado_at.strftime('%d/%m/%Y %H:%M') if integracion.actualizado_at and integracion.actualizado_at.strftime is defined else integracion.actualizado_at }}</small>
+                {% elif configurado %}
+                    <p>Autoriza una sola vez la cuenta Google que administra la agenda. Huancayoga guardará el acceso de forma cifrada.</p>
+                {% else %}
+                    <p>Faltan las variables de Google OAuth en el servidor. Agrégalas antes de iniciar la autorización.</p>
+                {% endif %}
+            </div>
+            <div class="calendar-connection-actions">
+                {% if integracion %}
+                    <form method="post" action="{{ url_for('admin_google_calendar_sincronizar') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-success"><i class="bi bi-arrow-repeat"></i> Sincronizar pendientes</button>
+                    </form>
+                    <form method="post" action="{{ url_for('admin_google_calendar_desconectar') }}" onsubmit="return confirm('¿Desconectar Google Calendar? Las reservas de Huancayoga no se eliminarán.')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-outline-danger">Desconectar</button>
+                    </form>
+                {% else %}
+                    <a href="{{ url_for('admin_google_calendar_conectar') }}" class="btn btn-success {{ 'disabled' if not configurado else '' }}"{% if not configurado %} aria-disabled="true" tabindex="-1"{% endif %}>
+                        <i class="bi bi-google"></i> Conectar Google Calendar
+                    </a>
+                {% endif %}
+            </div>
+        </section>
+
+        {% if not configurado %}
+            <section class="calendar-setup-note" aria-labelledby="calendar-setup-title">
+                <i class="bi bi-key"></i>
+                <div>
+                    <h2 id="calendar-setup-title">Configuración pendiente</h2>
+                    <p>Define <code>APP_BASE_URL</code>, <code>GOOGLE_CLIENT_ID</code>, <code>GOOGLE_CLIENT_SECRET</code> y <code>OAUTH_TOKEN_ENCRYPTION_KEY</code> en Render.</p>
+                    <span>URL de redirección autorizada</span>
+                    <code>{{ callback_url }}</code>
+                </div>
+            </section>
+        {% endif %}
+
+        <section class="admin-operation-metrics calendar-metrics" aria-label="Estado de sincronización">
+            <article class="operation-metric operation-metric-total"><span>Próximas</span><strong>{{ resumen.total }}</strong><small>reservas confirmadas</small></article>
+            <article class="operation-metric operation-metric-confirmed"><span>Sincronizadas</span><strong>{{ resumen.sincronizadas }}</strong><small>eventos actualizados</small></article>
+            <article class="operation-metric operation-metric-pending"><span>Pendientes</span><strong>{{ resumen.pendientes }}</strong><small>listas para reintento</small></article>
+            <article class="operation-metric operation-metric-complete"><span>Con error</span><strong>{{ resumen.errores }}</strong><small>requieren revisión</small></article>
+        </section>
+
+        <section class="admin-operation-panel calendar-reservations-panel">
+            <header class="admin-operation-panel-header">
+                <div>
+                    <h2>Próximas reservas confirmadas</h2>
+                    <p>Estado en Google Calendar, separado del estado principal de la reserva.</p>
+                </div>
+            </header>
+
+            {% if proximas %}
+                <div class="calendar-reservation-list">
+                    {% for reserva in proximas %}
+                        {% set sync = reserva.sync_estado or 'pendiente' %}
+                        <article class="calendar-reservation-row">
+                            <div class="calendar-reservation-date">
+                                <strong>{{ reserva.fecha.strftime('%d') if reserva.fecha and reserva.fecha.strftime is defined else reserva.fecha }}</strong>
+                                <span>{{ reserva.fecha.strftime('%b') if reserva.fecha and reserva.fecha.strftime is defined else '' }}</span>
+                            </div>
+                            <div class="calendar-reservation-main">
+                                <h3>{{ reserva.servicio }}</h3>
+                                <p>{{ reserva.nombre_cliente }} · {{ reserva.hora_texto }} · {{ reserva.cantidad_personas }} {{ 'asistente' if reserva.cantidad_personas == 1 else 'asistentes' }}</p>
+                                {% if reserva.ultimo_error %}<small>{{ reserva.ultimo_error }}</small>{% endif %}
+                            </div>
+                            <span class="calendar-sync-badge is-{{ sync }}">{{ sync|capitalize }}</span>
+                            <div class="calendar-row-actions">
+                                {% if reserva.evento_url and sync == 'sincronizado' %}
+                                    <a href="{{ reserva.evento_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-secondary btn-sm">Ver evento</a>
+                                {% endif %}
+                                {% if sync in ['pendiente', 'error'] %}
+                                    <form method="post" action="{{ url_for('admin_reserva_sincronizar_calendario', reserva_id=reserva.id) }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-outline-success btn-sm">Reintentar</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="admin-operation-empty">
+                    <i class="bi bi-calendar2"></i>
+                    <h3>No hay próximas reservas confirmadas</h3>
+                    <p>Cuando confirmes una reserva aparecerá aquí y se sincronizará automáticamente.</p>
+                </div>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>

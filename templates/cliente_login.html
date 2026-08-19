@@ -1,80 +1,71 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Ingresar cliente - Huancayoga</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ingresar - Huancayoga</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/estilos.css') }}">
+    {% if turnstile_enabled %}<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>{% endif %}
 </head>
-<body>
-
-<nav class="navbar navbar-expand-lg navbar-dark bg-success">
-    <div class="container">
-        <a class="navbar-brand fw-bold" href="/">Huancayoga</a>
-
-        <div>
-            <a href="/" class="btn btn-light btn-sm">Inicio</a>
-            <a href="/cliente/registro" class="btn btn-primary btn-sm">Registrarse</a>
-            
+<body class="social-access-body">
+    <nav class="navbar navbar-dark cliente-navbar">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="/">Huancayoga</a>
+            <div><a href="/" class="btn btn-light btn-sm">Inicio</a><a href="/cliente/registro" class="btn btn-warning btn-sm ms-1">Registrarme</a></div>
         </div>
-    </div>
-</nav>
+    </nav>
 
-<section class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-5">
+    <main class="container social-access-page">
+        <section class="social-access-intro">
+            <span class="reservation-eyebrow">Mi Huancayoga</span>
+            <h1>Tu bienestar, en un acceso seguro</h1>
+            <p>Usamos tu DNI para conservar una sola cuenta personal aunque elijas entrar con Google, Facebook o TikTok.</p>
+            <div class="social-access-trust"><span>✓</span><div><strong>Tu cuenta no se duplica</strong><p>El proveedor se vincula al DNI que ingreses.</p></div></div>
+            <div class="social-access-trust"><span>✓</span><div><strong>Protección anti-bots</strong><p>Turnstile valida el acceso sin guardar respuestas del desafío.</p></div></div>
+            <div class="social-access-trust"><span>✓</span><div><strong>Correo para notificaciones</strong><p>Si el proveedor no comparte correo, te lo pediremos una sola vez.</p></div></div>
+        </section>
 
-            <div class="card shadow p-4">
-                <h2 class="text-center text-success mb-3">Ingresar como cliente</h2>
+        <section class="social-access-card">
+            <header><span>Acceso de clientes</span><h2>Bienvenido de nuevo</h2><p>Elige una forma de ingresar.</p></header>
 
-                <p class="text-center">
-                    Ingresa tu DNI para acceder a reservas y productos.
-                </p>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }}">{{ message }}</div>{% endfor %}{% endif %}
+            {% endwith %}
 
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        {% for category, message in messages %}
-                            <div class="alert alert-{{ category }}">
-                                {{ message }}
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-                {% endwith %}
+            {% if turnstile_requested and not turnstile_enabled %}
+                <div class="alert alert-warning">Turnstile está activado pero faltan sus claves.</div>
+            {% endif %}
 
-                <form method="POST" action="/cliente/login">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <form method="post" action="{{ url_for('cliente_login') }}" class="social-access-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label><span>DNI</span><input type="text" name="dni" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" autocomplete="username" placeholder="8 dígitos" required></label>
+                <label><span>Contraseña</span><input type="password" name="password" autocomplete="current-password" required></label>
+                {% if turnstile_enabled %}<div class="cf-turnstile social-turnstile" data-sitekey="{{ turnstile_site_key }}" data-theme="light"></div>{% endif %}
+                <button type="submit" class="social-primary-button">Ingresar con contraseña <span>→</span></button>
+                <a href="/cliente/recuperar" class="social-forgot-link">¿Olvidaste tu contraseña?</a>
+            </form>
 
-                    <div class="mb-3">
-                        <label class="form-label">DNI</label>
-                        <input type="text" name="dni" class="form-control" maxlength="8" required>
-                    </div>
-                    <label class="mt-3">Contraseña</label>
-<input
-    type="password"
-    name="password"
-    class="form-control"
-    required>
+            <div class="social-access-divider"><span>o continúa con una cuenta</span></div>
 
-                    <button type="submit" class="btn btn-success w-100">
-                        Ingresar
-                    </button>
-<a
-    href="/cliente/recuperar"
-    class="btn btn-link w-100 mt-2">
-    ¿Olvidaste tu contraseña?
-</a>
-                    <a href="/cliente/registro" class="btn btn-outline-success w-100 mt-2">
-                        Registrarme
-                    </a>
+            <form method="post" action="{{ url_for('cliente_social_preparar') }}" class="social-access-form social-provider-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label><span>Primero confirma tu DNI</span><input type="text" name="dni" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" autocomplete="username" placeholder="8 dígitos" required></label>
+                {% if turnstile_enabled %}<div class="cf-turnstile social-turnstile" data-sitekey="{{ turnstile_site_key }}" data-theme="light"></div>{% endif %}
+                <div class="social-provider-buttons">
+                    {% for proveedor, datos in proveedores_sociales.items() %}
+                        <button type="submit" name="proveedor" value="{{ proveedor }}" class="social-provider-button is-{{ proveedor }}"{% if not datos.configurado %} disabled title="Falta configurar las credenciales"{% endif %}>
+                            <span aria-hidden="true">{{ 'G' if proveedor == 'google' else ('f' if proveedor == 'facebook' else '♪') }}</span>
+                            Continuar con {{ datos.nombre }}
+                            {% if not datos.configurado %}<small>Pendiente</small>{% endif %}
+                        </button>
+                    {% endfor %}
+                </div>
+                <p class="social-provider-note">TikTok comparte nombre y avatar, pero no correo. Huancayoga lo solicitará para enviarte confirmaciones.</p>
+            </form>
 
-                </form>
-            </div>
-
-        </div>
-    </div>
-</section>
-
+            <footer>¿Aún no tienes cuenta? Puedes iniciar con un proveedor y completar tu registro después del DNI.</footer>
+        </section>
+    </main>
 </body>
 </html>

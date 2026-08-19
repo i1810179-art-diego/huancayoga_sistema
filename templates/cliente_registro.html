@@ -1,195 +1,151 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Registro cliente - Huancayoga</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Crear cuenta - Huancayoga</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/estilos.css') }}">
+    {% if turnstile_enabled %}<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>{% endif %}
 </head>
-<body>
-
-<nav class="navbar navbar-expand-lg navbar-dark bg-success">
-    <div class="container">
-        <a class="navbar-brand fw-bold" href="/">Huancayoga</a>
-
-        <div>
-            <a href="/" class="btn btn-light btn-sm">Inicio</a>
-            <a href="/cliente/login" class="btn btn-light btn-sm">Ingresar</a>
-            
+<body class="social-access-body registration-choice-body">
+    <nav class="navbar navbar-dark cliente-navbar">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="/">Huancayoga</a>
+            <div>
+                <a href="/" class="btn btn-light btn-sm">Inicio</a>
+                <a href="{{ url_for('cliente_login') }}" class="btn btn-warning btn-sm ms-1">Ingresar</a>
+            </div>
         </div>
-    </div>
-</nav>
+    </nav>
 
-<section class="container mt-5 mb-5">
-    <div class="row justify-content-center">
-        <div class="col-md-7">
+    <main class="container registration-choice-page">
+        <header class="registration-choice-header">
+            <span class="reservation-eyebrow">Mi Huancayoga</span>
+            <h1>Crea tu cuenta a tu manera</h1>
+            <p>Tu DNI mantiene una sola cuenta, tanto si eliges una red social como si prefieres usar contraseña.</p>
+        </header>
 
-            <div class="card shadow p-4">
-                <h2 class="text-center text-success mb-3">Registro de cliente</h2>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <section class="registration-choice-alerts">
+                    {% for category, message in messages %}<div class="alert alert-{{ category }}">{{ message }}</div>{% endfor %}
+                </section>
+            {% endif %}
+        {% endwith %}
 
-                <p class="text-center">
-                    Regístrate para poder reservar citas y comprar productos.
-                </p>
+        {% if turnstile_requested and not turnstile_enabled %}
+            <div class="alert alert-warning registration-choice-alerts">Turnstile está activado, pero todavía faltan sus claves.</div>
+        {% endif %}
 
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        {% for category, message in messages %}
-                            <div class="alert alert-{{ category }}">
-                                {{ message }}
-                            </div>
-                        {% endfor %}
+        <section class="registration-choice-grid">
+            <article class="registration-social-card">
+                <div class="registration-card-label">Opción rápida</div>
+                <span class="registration-recommended">Recomendada</span>
+                <h2>Registrarme con una cuenta</h2>
+                <p>Primero confirma tu DNI y después elige el proveedor. Si eres nuevo, solo te pediremos los datos que falten.</p>
+
+                <form method="post" action="{{ url_for('cliente_social_preparar') }}" class="social-access-form registration-social-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <label for="social-register-dni">
+                        <span>DNI</span>
+                        <input id="social-register-dni" type="text" name="dni" value="{{ dni_recibido }}" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" autocomplete="username" placeholder="Ingresa tus 8 dígitos" required>
+                    </label>
+
+                    {% if turnstile_enabled %}
+                        <div class="cf-turnstile social-turnstile" data-sitekey="{{ turnstile_site_key }}" data-theme="light"></div>
                     {% endif %}
-                {% endwith %}
 
-                <form method="POST">
+                    <div class="social-provider-buttons registration-provider-buttons">
+                        {% for proveedor, datos in proveedores_sociales.items() %}
+                            <button type="submit" name="proveedor" value="{{ proveedor }}" class="social-provider-button is-{{ proveedor }}"{% if not datos.configurado %} disabled title="Falta configurar las credenciales de {{ datos.nombre }}"{% endif %}>
+                                <span aria-hidden="true">{{ 'G' if proveedor == 'google' else ('f' if proveedor == 'facebook' else '♪') }}</span>
+                                Registrarme con {{ datos.nombre }}
+                                {% if not datos.configurado %}<small>Pendiente</small>{% endif %}
+                            </button>
+                        {% endfor %}
+                    </div>
+                </form>
+
+                <div class="registration-social-steps">
+                    <div><span>1</span><p><strong>Validamos tu DNI</strong>Evitamos cuentas duplicadas.</p></div>
+                    <div><span>2</span><p><strong>Vinculas tu proveedor</strong>No guardamos sus contraseñas.</p></div>
+                    <div><span>3</span><p><strong>Completas lo necesario</strong>TikTok no comparte correo.</p></div>
+                </div>
+            </article>
+
+            <article class="registration-password-card">
+                <div class="registration-card-label">Opción tradicional</div>
+                <h2>Registrarme con contraseña</h2>
+                <p>Consulta tu DNI y completa tus datos para crear un acceso independiente.</p>
+
+                <form method="post" action="{{ url_for('cliente_registro') }}" class="registration-password-form">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-    <label>DNI</label>
-    <div class="input-group mb-3">
-        <input
-            type="text"
-            name="dni"
-            id="dni"
-            class="form-control"
-            maxlength="8"
-            required>
-
-        <button
-            type="button"
-            class="btn btn-success"
-            onclick="buscarDNI()">
-            Buscar DNI
-        </button>
-    </div>
-
-    <div id="mensaje-reniec" class="mb-3"></div>
-
-    <label>Nombres</label>
-    <input
-        type="text"
-        name="nombres"
-        id="nombres"
-        class="form-control"
-        required
-        readonly>
-
-    <label class="mt-3">Apellido paterno</label>
-    <input
-        type="text"
-        name="apellido_paterno"
-        id="apellido_paterno"
-        class="form-control"
-        required
-        readonly>
-
-    <label class="mt-3">Apellido materno</label>
-    <input
-        type="text"
-        name="apellido_materno"
-        id="apellido_materno"
-        class="form-control"
-        required
-        readonly>
-
-    <label class="mt-3">Celular</label>
-    <input
-        type="text"
-        name="celular"
-        class="form-control"
-        required>
-
-    <label class="mt-3">Correo electrónico</label>
-    <input
-        type="email"
-        name="correo"
-        class="form-control"
-        required>
-
-    <label class="mt-3">Contraseña</label>
-    <input
-        type="password"
-        name="password"
-        class="form-control"
-        required
-        minlength="6">
-
-    <label class="mt-3">Confirmar contraseña</label>
-    <input
-        type="password"
-        name="confirmar_password"
-        class="form-control"
-        required
-        minlength="6">
-
-    <button
-        type="submit"
-        class="btn btn-success w-100 mt-4">
-        Registrarme
-    </button>
-
-    <a
-        href="/cliente/login"
-        class="btn btn-outline-secondary w-100 mt-2">
-        Ya tengo cuenta
-    </a>
-
-</form>
-            </div>
-
-        </div>
-    </div>
-</section>
-<script>
-function buscarDNI() {
-    const dni = document.getElementById("dni").value.trim();
-    const mensaje = document.getElementById("mensaje-reniec");
-
-    if (dni.length !== 8) {
-        mensaje.innerHTML = `
-            <div class="alert alert-warning">
-                Ingresa un DNI válido de 8 dígitos.
-            </div>
-        `;
-        return;
-    }
-
-    mensaje.innerHTML = `
-        <div class="alert alert-info">
-            Buscando datos en RENIEC...
-        </div>
-    `;
-
-    fetch(`/api/reniec/${dni}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.ok) {
-                document.getElementById("nombres").value = data.nombres;
-                document.getElementById("apellido_paterno").value = data.apellido_paterno;
-                document.getElementById("apellido_materno").value = data.apellido_materno;
-
-                mensaje.innerHTML = `
-                    <div class="alert alert-success">
-                        Datos encontrados correctamente.
+                    <label for="dni"><span>DNI</span></label>
+                    <div class="registration-dni-group">
+                        <input type="text" name="dni" id="dni" maxlength="8" inputmode="numeric" pattern="[0-9]{8}" value="{{ dni_recibido }}" autocomplete="username" placeholder="8 dígitos" required>
+                        <button type="button" onclick="buscarDNI()">Buscar DNI</button>
                     </div>
-                `;
-            } else {
-                mensaje.innerHTML = `
-                    <div class="alert alert-danger">
-                        ${data.mensaje}
+                    <div id="mensaje-reniec" class="registration-reniec-message" aria-live="polite"></div>
+
+                    <div class="registration-form-grid">
+                        <label><span>Nombres</span><input type="text" name="nombres" id="nombres" autocomplete="given-name" required readonly></label>
+                        <label><span>Apellido paterno</span><input type="text" name="apellido_paterno" id="apellido_paterno" autocomplete="family-name" required readonly></label>
+                        <label><span>Apellido materno</span><input type="text" name="apellido_materno" id="apellido_materno" required readonly></label>
+                        <label><span>Celular</span><input type="tel" name="celular" inputmode="numeric" pattern="9[0-9]{8}" maxlength="9" autocomplete="tel" placeholder="9 dígitos" required></label>
+                        <label class="registration-form-wide"><span>Correo electrónico</span><input type="email" name="correo" autocomplete="email" required></label>
+                        <label><span>Contraseña</span><input type="password" name="password" autocomplete="new-password" minlength="6" required></label>
+                        <label><span>Confirmar contraseña</span><input type="password" name="confirmar_password" autocomplete="new-password" minlength="6" required></label>
                     </div>
-                `;
+
+                    {% if turnstile_enabled %}
+                        <div class="cf-turnstile social-turnstile registration-password-turnstile" data-sitekey="{{ turnstile_site_key }}" data-theme="light"></div>
+                    {% endif %}
+
+                    <button type="submit" class="social-primary-button registration-submit">Crear mi cuenta <span>→</span></button>
+                </form>
+            </article>
+        </section>
+
+        <p class="registration-login-note">¿Ya tienes una cuenta? <a href="{{ url_for('cliente_login') }}">Ingresa aquí</a></p>
+    </main>
+
+    <script>
+        async function buscarDNI() {
+            const dni = document.getElementById('dni').value.trim();
+            const mensaje = document.getElementById('mensaje-reniec');
+            const campos = ['nombres', 'apellido_paterno', 'apellido_materno'];
+
+            campos.forEach(id => document.getElementById(id).value = '');
+
+            if (!/^[0-9]{8}$/.test(dni)) {
+                mensaje.className = 'registration-reniec-message is-warning';
+                mensaje.textContent = 'Ingresa un DNI válido de 8 dígitos.';
+                return;
             }
-        })
-        .catch(error => {
-            mensaje.innerHTML = `
-                <div class="alert alert-danger">
-                    Error al consultar RENIEC.
-                </div>
-            `;
-        });
-}
-</script>
+
+            mensaje.className = 'registration-reniec-message is-loading';
+            mensaje.textContent = 'Buscando datos del DNI…';
+
+            try {
+                const response = await fetch(`/api/reniec/${encodeURIComponent(dni)}`);
+                const data = await response.json();
+
+                if (!response.ok || !data.ok) {
+                    throw new Error(data.mensaje || 'No pudimos consultar el DNI.');
+                }
+
+                document.getElementById('nombres').value = data.nombres || '';
+                document.getElementById('apellido_paterno').value = data.apellido_paterno || '';
+                document.getElementById('apellido_materno').value = data.apellido_materno || '';
+                mensaje.className = 'registration-reniec-message is-success';
+                mensaje.textContent = 'Datos encontrados correctamente.';
+            } catch (error) {
+                mensaje.className = 'registration-reniec-message is-error';
+                mensaje.textContent = error.message || 'Error al consultar el DNI.';
+            }
+        }
+    </script>
 </body>
 </html>

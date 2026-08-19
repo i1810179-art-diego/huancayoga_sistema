@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Completa tu cuenta con TikTok | Prototipo Huancayoga</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=Nunito+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --verde: #164f40;
+            --verde-profundo: #103c32;
+            --verde-medio: #4d8b75;
+            --verde-suave: #e6f2ec;
+            --crema: #f5f0e7;
+            --papel: #fffdf9;
+            --arena: #e2d7c7;
+            --terracota: #d57650;
+            --texto: #22332d;
+            --muted: #69756f;
+            --error: #b8443f;
+            --sombra: 0 24px 70px rgba(26, 59, 47, .14);
+        }
+
+        * { box-sizing: border-box; }
+        html, body { margin: 0; min-height: 100%; }
+
+        body {
+            min-height: 100vh;
+            color: var(--texto);
+            background:
+                radial-gradient(circle at 4% 8%, rgba(77, 139, 117, .15), transparent 27rem),
+                radial-gradient(circle at 96% 92%, rgba(213, 118, 80, .12), transparent 28rem),
+                var(--crema);
+            font-family: "Nunito Sans", Arial, sans-serif;
+        }
+
+        button, input { font: inherit; }
+
+        .topbar {
+            min-height: 72px;
+            padding: 0 clamp(20px, 5vw, 72px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            color: #fff;
+            background: var(--verde-profundo);
+            box-shadow: 0 8px 30px rgba(16, 60, 50, .15);
+        }
+
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 11px;
+            color: inherit;
+            font-family: "Lora", Georgia, serif;
+            font-size: 21px;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .brand-mark {
+            width: 38px;
+            height: 38px;
+            display: grid;
+            place-items: center;
+            border: 1px solid rgba(255, 255, 255, .28);
+            border-radius: 50%;
+            background: rgba(255, 255, 255, .08);
+        }
+
+        .brand-mark svg { width: 21px; height: 21px; }
+        .top-actions { display: flex; align-items: center; gap: 10px; }
+
+        .prototype-label {
+            padding: 8px 12px;
+            border: 1px solid rgba(255, 255, 255, .22);
+            border-radius: 999px;
+            color: rgba(255, 255, 255, .8);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: .09em;
+            text-transform: uppercase;
+        }
+
+        .back-link {
+            padding: 9px 14px;
+            border-radius: 10px;
+            color: var(--verde-profundo);
+            background: #fff;
+            font-size: 13px;
+            font-weight: 800;
+            text-decoration: none;
+        }
+
+        .page-shell {
+            width: min(1100px, calc(100% - 34px));
+            margin: 0 auto;
+            padding: 36px 0 46px;
+        }
+
+        .page-heading {
+            margin-bottom: 22px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 28px;
+        }
+
+        .eyebrow {
+            margin: 0 0 7px;
+            color: var(--terracota);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin: 0;
+            color: var(--verde-profundo);
+            font-family: "Lora", Georgia, serif;
+            font-size: clamp(31px, 4vw, 43px);
+            letter-spacing: -.035em;
+        }
+
+        .heading-note {
+            max-width: 390px;
+            margin: 0 0 3px;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.55;
+        }
+
+        .account-shell {
+            display: grid;
+            grid-template-columns: 330px minmax(0, 1fr);
+            min-height: 640px;
+            overflow: hidden;
+            border: 1px solid rgba(83, 97, 89, .14);
+            border-radius: 25px;
+            background: var(--papel);
+            box-shadow: var(--sombra);
+        }
+
+        .summary-panel {
+            padding: 34px 29px;
+            color: #fff;
+            background:
+                radial-gradient(circle at 100% 0, rgba(255, 255, 255, .12), transparent 14rem),
+                linear-gradient(155deg, #174f41, #103d33);
+        }
+
+        .connected-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 7px 10px;
+            border: 1px solid rgba(255, 255, 255, .16);
+            border-radius: 999px;
+            color: rgba(255, 255, 255, .78);
+            background: rgba(255, 255, 255, .07);
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .05em;
+            text-transform: uppercase;
+        }
+
+        .connected-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #7ed6ae;
+            box-shadow: 0 0 0 4px rgba(126, 214, 174, .12);
+        }
+
+        .profile-card {
+            margin-top: 27px;
+            padding: 22px;
+            border: 1px solid rgba(255, 255, 255, .14);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, .08);
+            text-align: center;
+        }
+
+        .avatar {
+            position: relative;
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 14px;
+            display: grid;
+            place-items: center;
+            border: 3px solid rgba(255, 255, 255, .85);
+            border-radius: 50%;
+            color: #fff;
+            background: linear-gradient(145deg, #d78e72, #754c7a);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, .18);
+            font-family: "Lora", Georgia, serif;
+            font-size: 25px;
+        }
+
+        .tiktok-badge {
+            position: absolute;
+            right: -4px;
+            bottom: -2px;
+            width: 25px;
+            height: 25px;
+            display: grid;
+            place-items: center;
+            border: 2px solid var(--verde-profundo);
+            border-radius: 50%;
+            color: #fff;
+            background: #111;
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .profile-card h2 { margin: 0 0 3px; font-size: 16px; }
+        .profile-card p { margin: 0; color: rgba(255, 255, 255, .63); font-size: 12px; }
+
+        .provider-data {
+            margin: 19px 0 0;
+            display: grid;
+            gap: 10px;
+        }
+
+        .provider-row {
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, .1);
+            font-size: 11px;
+        }
+
+        .provider-row span { color: rgba(255, 255, 255, .58); }
+        .provider-row strong { font-size: 11px; }
+
+        .info-card {
+            margin-top: 24px;
+            padding: 17px;
+            display: flex;
+            gap: 11px;
+            border-radius: 14px;
+            color: #183e33;
+            background: #eef5f0;
+        }
+
+        .info-icon {
+            flex: 0 0 auto;
+            width: 29px;
+            height: 29px;
+            display: grid;
+            place-items: center;
+            border-radius: 9px;
+            color: var(--verde);
+            background: #dcece3;
+            font-weight: 800;
+        }
+
+        .info-card strong { display: block; margin: 1px 0 3px; font-size: 11px; }
+        .info-card p { margin: 0; color: #5e716a; font-size: 10px; line-height: 1.5; }
+
+        .change-account {
+            width: 100%;
+            margin-top: 17px;
+            border: 0;
+            color: rgba(255, 255, 255, .72);
+            background: transparent;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 700;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+
+        .form-panel { padding: 34px clamp(28px, 5vw, 54px) 38px; }
+
+        .steps {
+            margin-bottom: 31px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .step {
+            position: relative;
+            padding-top: 10px;
+            color: #9a9f9c;
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+        }
+
+        .step::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            border-radius: 999px;
+            background: #e8e5de;
+        }
+
+        .step.done { color: var(--verde-medio); }
+        .step.done::before { background: var(--verde-medio); }
+        .step.active { color: var(--verde); }
+        .step.active::before { background: var(--verde); }
+
+        .panel-heading { margin-bottom: 23px; }
+        .panel-heading h2 { margin: 0 0 7px; color: var(--verde-profundo); font-family: "Lora", Georgia, serif; font-size: 27px; letter-spacing: -.025em; }
+        .panel-heading p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 17px; }
+        .field.full { grid-column: 1 / -1; }
+
+        .field label {
+            margin-bottom: 7px;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            color: var(--texto);
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .label-note { color: #8a918d; font-size: 9px; font-weight: 600; }
+
+        .field input {
+            width: 100%;
+            height: 48px;
+            padding: 0 14px;
+            border: 1px solid #ddd6ca;
+            border-radius: 12px;
+            outline: none;
+            color: var(--texto);
+            background: #fffefa;
+            transition: .2s ease;
+        }
+
+        .field input:focus { border-color: var(--verde-medio); box-shadow: 0 0 0 4px rgba(77, 139, 117, .11); }
+        .field input[readonly] { color: #68736e; background: #f3f0ea; cursor: not-allowed; }
+        .field.error input { border-color: var(--error); }
+        .field-error { min-height: 14px; margin: 5px 0 0; color: var(--error); font-size: 9px; }
+
+        .notice-row {
+            margin-top: 19px;
+            padding: 13px 15px;
+            display: flex;
+            align-items: flex-start;
+            gap: 11px;
+            border: 1px solid #dce8e1;
+            border-radius: 12px;
+            background: var(--verde-suave);
+        }
+
+        .notice-row svg { flex: 0 0 auto; width: 17px; height: 17px; color: var(--verde); }
+        .notice-row p { margin: 0; color: #53675f; font-size: 10px; line-height: 1.5; }
+        .notice-row strong { color: var(--verde-profundo); }
+
+        .choice {
+            margin-top: 13px;
+            display: grid;
+            grid-template-columns: 20px 1fr;
+            gap: 9px;
+            align-items: start;
+            cursor: pointer;
+        }
+
+        .choice input { width: 17px; height: 17px; margin: 1px 0 0; accent-color: var(--verde); }
+        .choice strong { display: block; margin-bottom: 2px; font-size: 11px; }
+        .choice span { display: block; color: var(--muted); font-size: 9px; line-height: 1.45; }
+
+        .primary-button {
+            width: 100%;
+            min-height: 49px;
+            margin-top: 21px;
+            border: 0;
+            border-radius: 13px;
+            color: #fff;
+            background: var(--verde);
+            box-shadow: 0 10px 22px rgba(22, 79, 64, .17);
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 800;
+            transition: transform .18s ease, background .18s ease;
+        }
+
+        .primary-button:hover { background: var(--verde-profundo); transform: translateY(-1px); }
+
+        .legal-copy { margin: 13px 0 0; color: #8a918d; font-size: 9px; line-height: 1.5; text-align: center; }
+
+        .screen { display: none; }
+        .screen.active { display: block; animation: screenIn .28s ease both; }
+        @keyframes screenIn { from { opacity: 0; transform: translateY(5px); } }
+
+        .email-chip {
+            margin: 19px 0;
+            padding: 13px 15px;
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            border: 1px solid #dce8e1;
+            border-radius: 12px;
+            background: var(--verde-suave);
+            color: var(--verde-profundo);
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .email-chip svg { width: 18px; height: 18px; }
+
+        .code-inputs { margin: 23px 0 8px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+        .code-input {
+            width: 100%;
+            height: 54px;
+            padding: 0;
+            border: 1px solid #d9d3c8;
+            border-radius: 11px;
+            outline: none;
+            color: var(--verde-profundo);
+            background: #fff;
+            font-size: 20px;
+            font-weight: 800;
+            text-align: center;
+        }
+
+        .code-input:focus { border-color: var(--verde-medio); box-shadow: 0 0 0 3px rgba(77, 139, 117, .1); }
+        .resend { width: 100%; margin-top: 12px; border: 0; color: var(--verde); background: transparent; cursor: pointer; font-size: 10px; font-weight: 800; }
+
+        .success-screen { padding-top: 18px; text-align: center; }
+        .success-mark {
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 18px;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            color: #fff;
+            background: var(--verde-medio);
+            box-shadow: 0 0 0 9px var(--verde-suave);
+        }
+
+        .success-mark svg { width: 34px; height: 34px; }
+        .success-screen h2 { margin: 0 0 8px; color: var(--verde-profundo); font-family: "Lora", Georgia, serif; font-size: 28px; }
+        .success-screen > p { max-width: 430px; margin: 0 auto; color: var(--muted); font-size: 12px; line-height: 1.6; }
+
+        .success-summary {
+            max-width: 420px;
+            margin: 23px auto 4px;
+            padding: 17px;
+            display: grid;
+            gap: 10px;
+            border: 1px solid #e4ddd2;
+            border-radius: 14px;
+            background: #fffefa;
+            text-align: left;
+        }
+
+        .success-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 10px; }
+        .success-row span { color: var(--muted); }
+        .success-row strong { color: var(--verde-profundo); }
+
+        .toast {
+            position: fixed;
+            z-index: 20;
+            right: 22px;
+            bottom: 22px;
+            max-width: min(360px, calc(100% - 32px));
+            padding: 14px 16px;
+            display: flex;
+            gap: 10px;
+            border: 1px solid rgba(77, 139, 117, .24);
+            border-radius: 14px;
+            background: #fff;
+            box-shadow: 0 18px 45px rgba(20, 55, 43, .2);
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(12px);
+            transition: .24s ease;
+        }
+
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast strong { display: block; margin-bottom: 2px; color: var(--verde); font-size: 11px; }
+        .toast p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
+
+        @media (max-width: 820px) {
+            .page-heading { align-items: flex-start; flex-direction: column; gap: 8px; }
+            .account-shell { grid-template-columns: 1fr; }
+            .summary-panel { padding: 28px; }
+            .provider-data { grid-template-columns: 1fr 1fr; }
+            .info-card { margin-top: 18px; }
+        }
+
+        @media (max-width: 560px) {
+            .topbar { min-height: 64px; padding: 0 16px; }
+            .brand { font-size: 18px; }
+            .prototype-label { display: none; }
+            .page-shell { width: min(100% - 20px, 520px); padding: 18px 0 25px; }
+            .page-heading { margin-bottom: 16px; }
+            .heading-note { font-size: 11px; }
+            .account-shell { border-radius: 19px; }
+            .summary-panel { padding: 24px 21px; }
+            .profile-card { padding: 17px; }
+            .provider-data { grid-template-columns: 1fr; }
+            .form-panel { padding: 26px 20px 30px; }
+            .form-grid { grid-template-columns: 1fr; gap: 13px; }
+            .field.full { grid-column: auto; }
+            .step { font-size: 8px; }
+            .code-inputs { gap: 5px; }
+            .code-input { height: 48px; font-size: 17px; }
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <a class="brand" href="/" aria-label="Huancayoga">
+            <span class="brand-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M12 20c0-5.2 1.4-9.1 5.7-13.2M12 20c0-4.1-1.7-7.2-5.7-10.3M12.2 15.4c2.8.1 5.1-1.4 6.3-4.1-2.7-.3-5 .8-6.3 4.1ZM11 13c-2.7.2-5-1.2-6.2-3.8 2.6-.4 4.9.7 6.2 3.8Z"/>
+                </svg>
+            </span>
+            Huancayoga
+        </a>
+        <div class="top-actions">
+            <span class="prototype-label">Prototipo · TikTok</span>
+            <a class="back-link" href="/static/prototipos/acceso_social_turnstile.html">Volver al acceso</a>
+        </div>
+    </header>
+
+    <main class="page-shell">
+        <div class="page-heading">
+            <div>
+                <p class="eyebrow">Último paso</p>
+                <h1>Completa tu cuenta</h1>
+            </div>
+            <p class="heading-note">TikTok ya confirmó tu identidad social. Ahora necesitamos un correo para las reservas, pedidos y seguridad de tu cuenta.</p>
+        </div>
+
+        <section class="account-shell" aria-label="Confirmación de datos después de TikTok">
+            <aside class="summary-panel">
+                <span class="connected-label"><span class="connected-dot"></span> Cuenta conectada</span>
+
+                <div class="profile-card">
+                    <div class="avatar">CR<span class="tiktok-badge">♪</span></div>
+                    <h2>Camila R.</h2>
+                    <p>@camila.bienestar</p>
+                </div>
+
+                <div class="provider-data">
+                    <div class="provider-row"><span>Proveedor</span><strong>TikTok</strong></div>
+                    <div class="provider-row"><span>DNI confirmado</span><strong>75••••24</strong></div>
+                    <div class="provider-row"><span>Turnstile</span><strong>Superado ✓</strong></div>
+                </div>
+
+                <div class="info-card">
+                    <span class="info-icon">i</span>
+                    <div>
+                        <strong>¿Por qué pedimos tu correo?</strong>
+                        <p>TikTok no lo comparte en el acceso básico. Huancayoga lo usará para confirmar reservas, pedidos y cambios de seguridad.</p>
+                    </div>
+                </div>
+                <button class="change-account" id="change-account" type="button">Usar otra cuenta de TikTok</button>
+            </aside>
+
+            <div class="form-panel">
+                <div class="steps" aria-label="Progreso del registro">
+                    <span class="step done">1. DNI confirmado</span>
+                    <span class="step done">2. TikTok conectado</span>
+                    <span class="step active" id="contact-step">3. Datos de contacto</span>
+                </div>
+
+                <section class="screen active" id="data-screen">
+                    <div class="panel-heading">
+                        <h2>Confirma tus datos</h2>
+                        <p>Revisa la información y agrega un correo al que tengas acceso.</p>
+                    </div>
+
+                    <form id="contact-form" novalidate>
+                        <div class="form-grid">
+                            <div class="field">
+                                <label for="dni">DNI <span class="label-note">Ya validado</span></label>
+                                <input id="dni" type="text" value="75••••24" readonly>
+                                <p class="field-error"></p>
+                            </div>
+                            <div class="field">
+                                <label for="name">Nombre visible <span class="label-note">Desde TikTok</span></label>
+                                <input id="name" type="text" value="Camila R." autocomplete="name">
+                                <p class="field-error"></p>
+                            </div>
+                            <div class="field full" id="email-field">
+                                <label for="email">Correo electrónico <span class="label-note">Obligatorio</span></label>
+                                <input id="email" type="email" placeholder="nombre@correo.com" autocomplete="email">
+                                <p class="field-error" id="email-error"></p>
+                            </div>
+                            <div class="field full" id="phone-field">
+                                <label for="phone">Celular <span class="label-note">9 dígitos</span></label>
+                                <input id="phone" type="tel" inputmode="numeric" maxlength="9" placeholder="Ejemplo: 906458296" autocomplete="tel">
+                                <p class="field-error" id="phone-error"></p>
+                            </div>
+                        </div>
+
+                        <div class="notice-row">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z"/><path d="M12 10v6M12 7h.01"/></svg>
+                            <p><strong>Avisos necesarios:</strong> usaremos este correo para confirmaciones de citas, pedidos y seguridad. No necesitas aceptar publicidad para utilizar Huancayoga.</p>
+                        </div>
+
+                        <label class="choice">
+                            <input id="marketing" type="checkbox">
+                            <span><strong>Quiero recibir novedades y promociones</strong><span>Es opcional y podrás desactivarlo cuando quieras.</span></span>
+                        </label>
+
+                        <button class="primary-button" type="submit">Enviar código a mi correo</button>
+                        <p class="legal-copy">Al continuar confirmas que los datos ingresados te pertenecen. Tu DNI no se comparte con TikTok.</p>
+                    </form>
+                </section>
+
+                <section class="screen" id="code-screen">
+                    <div class="panel-heading">
+                        <h2>Revisa tu correo</h2>
+                        <p>Enviamos un código de 6 dígitos mediante Brevo. En este prototipo puedes escribir cualquier combinación.</p>
+                    </div>
+                    <div class="email-chip">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m5 8 7 5 7-5"/></svg>
+                        <span id="email-destination">nombre@correo.com</span>
+                    </div>
+                    <form id="code-form" novalidate>
+                        <div class="code-inputs" aria-label="Código de verificación">
+                            <input class="code-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 1">
+                            <input class="code-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 2">
+                            <input class="code-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 3">
+                            <input class="code-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 4">
+                            <input class="code-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 5">
+                            <input class="code-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 6">
+                        </div>
+                        <p class="field-error" id="code-error"></p>
+                        <button class="primary-button" type="submit">Confirmar correo y terminar</button>
+                        <button class="resend" id="resend-code" type="button">Reenviar código</button>
+                    </form>
+                </section>
+
+                <section class="screen success-screen" id="success-screen">
+                    <div class="success-mark">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 12 4 4L19 6"/></svg>
+                    </div>
+                    <h2>Tu cuenta quedó lista</h2>
+                    <p>TikTok quedó vinculado a tu ficha de Huancayoga y el correo fue confirmado. Ya puedes gestionar tus reservas y pedidos.</p>
+                    <div class="success-summary">
+                        <div class="success-row"><span>Acceso</span><strong>TikTok conectado ✓</strong></div>
+                        <div class="success-row"><span>Correo</span><strong id="confirmed-email">Confirmado ✓</strong></div>
+                        <div class="success-row"><span>Notificaciones</span><strong id="notification-status">Solo esenciales</strong></div>
+                    </div>
+                    <button class="primary-button" id="go-profile" type="button">Ir a mi cuenta</button>
+                    <p class="legal-copy">Fin de la simulación. Ningún dato fue enviado ni almacenado.</p>
+                </section>
+            </div>
+        </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">
+        <span>✓</span>
+        <div><strong id="toast-title">Listo</strong><p id="toast-copy">Acción simulada correctamente.</p></div>
+    </div>
+
+    <script>
+        const contactForm = document.getElementById("contact-form");
+        const email = document.getElementById("email");
+        const phone = document.getElementById("phone");
+        const emailField = document.getElementById("email-field");
+        const phoneField = document.getElementById("phone-field");
+        const codeInputs = [...document.querySelectorAll(".code-input")];
+        const toast = document.getElementById("toast");
+        let savedEmail = "";
+        let toastTimer;
+
+        function showScreen(id) {
+            document.querySelectorAll(".screen").forEach(screen => screen.classList.toggle("active", screen.id === id));
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+
+        function showToast(title, copy) {
+            document.getElementById("toast-title").textContent = title;
+            document.getElementById("toast-copy").textContent = copy;
+            toast.classList.add("show");
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.remove("show"), 3300);
+        }
+
+        phone.addEventListener("input", () => { phone.value = phone.value.replace(/\D/g, "").slice(0, 9); });
+
+        contactForm.addEventListener("submit", event => {
+            event.preventDefault();
+            const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim());
+            const validPhone = /^9\d{8}$/.test(phone.value);
+            emailField.classList.toggle("error", !validEmail);
+            phoneField.classList.toggle("error", !validPhone);
+            document.getElementById("email-error").textContent = validEmail ? "" : "Ingresa un correo válido.";
+            document.getElementById("phone-error").textContent = validPhone ? "" : "Ingresa un celular peruano válido de 9 dígitos.";
+            if (!validEmail) { email.focus(); return; }
+            if (!validPhone) { phone.focus(); return; }
+
+            savedEmail = email.value.trim();
+            document.getElementById("email-destination").textContent = savedEmail;
+            showScreen("code-screen");
+            setTimeout(() => codeInputs[0].focus(), 250);
+            showToast("Código enviado", "Brevo enviaría aquí el mensaje de verificación.");
+        });
+
+        codeInputs.forEach((input, index) => {
+            input.addEventListener("input", () => {
+                input.value = input.value.replace(/\D/g, "").slice(0, 1);
+                if (input.value && index < codeInputs.length - 1) codeInputs[index + 1].focus();
+            });
+            input.addEventListener("keydown", event => {
+                if (event.key === "Backspace" && !input.value && index > 0) codeInputs[index - 1].focus();
+            });
+            input.addEventListener("paste", event => {
+                const digits = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+                if (!digits) return;
+                event.preventDefault();
+                digits.split("").forEach((digit, digitIndex) => { if (codeInputs[digitIndex]) codeInputs[digitIndex].value = digit; });
+                codeInputs[Math.min(digits.length, 6) - 1].focus();
+            });
+        });
+
+        document.getElementById("code-form").addEventListener("submit", event => {
+            event.preventDefault();
+            const code = codeInputs.map(input => input.value).join("");
+            if (!/^\d{6}$/.test(code)) {
+                document.getElementById("code-error").textContent = "Completa los 6 dígitos del código.";
+                codeInputs.find(input => !input.value)?.focus();
+                return;
+            }
+            document.getElementById("confirmed-email").textContent = `${savedEmail} ✓`;
+            document.getElementById("notification-status").textContent = document.getElementById("marketing").checked ? "Esenciales y promociones" : "Solo esenciales";
+            document.getElementById("contact-step").classList.remove("active");
+            document.getElementById("contact-step").classList.add("done");
+            showScreen("success-screen");
+        });
+
+        document.getElementById("resend-code").addEventListener("click", () => showToast("Código reenviado", "En producción se generaría un código nuevo con tiempo de expiración."));
+        document.getElementById("change-account").addEventListener("click", () => { window.location.href = "/static/prototipos/acceso_social_turnstile.html"; });
+        document.getElementById("go-profile").addEventListener("click", () => showToast("Fin del prototipo", "En la versión real se abriría el perfil del cliente."));
+    </script>
+</body>
+</html>

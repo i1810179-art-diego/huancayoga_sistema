@@ -44,6 +44,11 @@
                     Reservas
                 </a>
 
+                <a href="{{ url_for('admin_google_calendar') }}"
+                   class="btn btn-light btn-sm">
+                    Calendar
+                </a>
+
                 <a href="/admin/pedidos"
                    class="btn btn-light btn-sm">
                     Pedidos
@@ -236,6 +241,18 @@
                 <small>Pendientes</small>
             </div>
 
+        </section>
+
+        <section class="admin-publication-banner calendar-dashboard-banner">
+            <div>
+                <span class="admin-small-title">Agenda externa</span>
+                <h2>Google Calendar</h2>
+                <p>Conecta la agenda de la dueña y controla la sincronización de las reservas confirmadas.</p>
+            </div>
+            <a href="{{ url_for('admin_google_calendar') }}" class="btn admin-publication-button">
+                <i class="bi bi-calendar2-check"></i>
+                Administrar integración
+            </a>
         </section>
 
         <!-- ACCESO A PUBLICACIONES -->

@@ -170,7 +170,13 @@
                         </div>
 
                         <div>
-                            <h4>{{ proxima_cita[1] }}</h4>
+                            <h4>
+                                {{ categorias_programa.get(proxima_cita[7], proxima_cita[1]) if proxima_cita[6] == 'institucional' else proxima_cita[1] }}
+                            </h4>
+
+                            {% if proxima_cita[8] %}
+                                <p><strong>Organización:</strong> {{ proxima_cita[8] }}</p>
+                            {% endif %}
 
                             <p>
                                 <strong>Fecha:</strong>
@@ -180,6 +186,11 @@
                             <p>
                                 <strong>Hora:</strong>
                                 {{ proxima_cita[3] }}
+                            </p>
+
+                            <p>
+                                <strong>Personas:</strong>
+                                {{ proxima_cita[5] }}
                             </p>
 
                             <span class="badge bg-success">

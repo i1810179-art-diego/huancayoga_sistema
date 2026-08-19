@@ -1,122 +1,317 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Reservar cita - Huancayoga</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <!-- Bootstrap por CDN -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Reservar - Huancayoga</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- CSS propio -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/estilos.css') }}">
 </head>
-<body>
-
-    <nav class="navbar navbar-expand-lg navbar-dark bg-success">
+{% set modo_activo = form_data.get('tipo_reserva', 'regular') %}
+<body class="cliente-body reservation-page-body">
+    <nav class="navbar navbar-dark cliente-navbar reservation-navbar">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="/">Huancayoga</a>
-
-            <div>
-                <a href="/" class="btn btn-light btn-sm">Inicio</a>
-                <a href="/reservar" class="btn btn-warning btn-sm">Reservar cita</a>
-                <a href="/productos" class="btn btn-light btn-sm">Productos</a>
+            <a class="navbar-brand fw-bold" href="/cliente/dashboard">Mi Huancayoga</a>
+            <div class="reservation-nav-actions">
+                <a href="/cliente/mis-citas" class="btn btn-outline-light btn-sm">Mis citas</a>
+                <a href="/cliente/dashboard" class="btn btn-light btn-sm">Volver</a>
             </div>
         </div>
     </nav>
 
-    <section class="container mt-5 mb-5">
-        <div class="row justify-content-center">
-            <div class="col-md-8">
-
-                <div class="card shadow p-4">
-                    <h2 class="text-center text-success mb-4">Reservar cita</h2>
-
-                    <p class="text-center">
-                        Completa el formulario para registrar tu reserva en Huancayoga.
-                    </p>
-
-                    <!-- Mensajes flash -->
-                    {% with messages = get_flashed_messages(with_categories=true) %}
-                        {% if messages %}
-                            {% for category, message in messages %}
-                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                                    {{ message }}
-
-                                    <br>
-
-                                    <a href="https://wa.me/51964819551?text=Hola,%20acabo%20de%20registrar%20una%20reserva%20en%20Huancayoga.%20Quiero%20confirmarla."
-                                       target="_blank"
-                                       class="btn btn-success btn-sm mt-2">
-                                        Confirmar por WhatsApp
-                                    </a>
-
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                </div>
-                            {% endfor %}
-                        {% endif %}
-                    {% endwith %}
-
-                    <form method="POST" action="/reservar">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                        <div class="mb-3">
-                            <label class="form-label">Nombre completo</label>
-                            <input type="text" name="nombre_cliente" class="form-control" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Celular</label>
-                            <input type="text" name="celular" class="form-control" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Correo electrónico</label>
-                            <input type="email" name="correo" class="form-control">
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Servicio</label>
-                            <select name="servicio_id" class="form-select" required>
-                                <option value="">Seleccione un servicio</option>
-
-                                {% for servicio in servicios %}
-                                    <option value="{{ servicio[0] }}">
-                                        {{ servicio[1] }} - S/ {{ servicio[2] }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Fecha de reserva</label>
-                            <input type="date" name="fecha" class="form-control" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Hora de reserva</label>
-                            <input type="time" name="hora" class="form-control" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Comentario adicional</label>
-                            <textarea name="comentario" class="form-control" rows="3" placeholder="Ejemplo: Deseo una clase para principiante"></textarea>
-                        </div>
-
-                        <button type="submit" class="btn btn-success w-100">
-                            Registrar reserva
-                        </button>
-
-                    </form>
-
-                </div>
-
+    <main class="container reservation-page">
+        <header class="reservation-heading">
+            <div>
+                <span class="reservation-eyebrow">Agenda Huancayoga</span>
+                <h1>Elige cómo deseas reservar</h1>
+                <p>Cada solicitud aparta un horario completo para el cliente y su grupo.</p>
             </div>
+            <div class="reservation-capacity-note">
+                <strong>Máximo 40</strong>
+                <span>asistentes totales por reserva</span>
+            </div>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="reservation-alerts" aria-live="polite">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <section class="reservation-modes" aria-label="Modalidades de reserva">
+            <button type="button" class="reservation-mode-card{% if modo_activo == 'regular' %} is-active{% endif %}" data-reservation-mode="regular" aria-pressed="{{ 'true' if modo_activo == 'regular' else 'false' }}">
+                <span class="reservation-mode-icon" aria-hidden="true">☼</span>
+                <span>
+                    <small>Modalidad 01</small>
+                    <strong>Clase regular o grupal</strong>
+                    <span>Reserva para ti y tus invitados. Capacidad máxima de 40 asistentes por horario.</span>
+                </span>
+                <span class="reservation-mode-check" aria-hidden="true">✓</span>
+            </button>
+            <button type="button" class="reservation-mode-card{% if modo_activo == 'institucional' %} is-active{% endif %}" data-reservation-mode="institucional" aria-pressed="{{ 'true' if modo_activo == 'institucional' else 'false' }}">
+                <span class="reservation-mode-icon" aria-hidden="true">◇</span>
+                <span>
+                    <small>Modalidad 02</small>
+                    <strong>Programa para grupos e instituciones</strong>
+                    <span>Solicita una sesión privada para instituciones, empresas o grupos que necesiten una clase adaptada.</span>
+                </span>
+                <span class="reservation-mode-check" aria-hidden="true">✓</span>
+            </button>
+        </section>
+
+        <div class="reservation-layout">
+            <section class="reservation-form-card">
+                <form method="post" action="{{ url_for('reservar') }}" id="reservation-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="tipo_reserva" id="tipo-reserva" value="{{ modo_activo }}">
+
+                    <fieldset class="reservation-form-panel" data-reservation-panel="regular"{% if modo_activo != 'regular' %} hidden disabled{% endif %}>
+                        <header class="reservation-form-section-heading">
+                            <span>01</span>
+                            <div><h2>Clase regular o grupal</h2><p>Una reserva para ti y todos tus invitados.</p></div>
+                        </header>
+
+                        <div class="reservation-form-grid">
+                            <label class="reservation-field reservation-field-wide">
+                                <span>Nombre completo</span>
+                                <input type="text" name="nombre_cliente" maxlength="100" value="{{ form_data.get('nombre_cliente', cliente.nombre) }}" autocomplete="name" required>
+                            </label>
+                            <label class="reservation-field">
+                                <span>Celular</span>
+                                <input type="tel" name="celular" maxlength="20" value="{{ form_data.get('celular', cliente.celular) }}" autocomplete="tel" required>
+                            </label>
+                            <label class="reservation-field">
+                                <span>Correo <small>Opcional</small></span>
+                                <input type="email" name="correo" maxlength="100" value="{{ form_data.get('correo', cliente.correo) }}" autocomplete="email">
+                            </label>
+                            <label class="reservation-field reservation-field-wide">
+                                <span>Servicio</span>
+                                <select name="servicio_id" required>
+                                    <option value="">Selecciona un servicio</option>
+                                    {% for servicio in servicios %}
+                                        <option value="{{ servicio[0] }}"{% if form_data.get('servicio_id', '')|string == servicio[0]|string %} selected{% endif %}>
+                                            {{ servicio[1] }} · {{ servicio[3] }} min · S/ {{ servicio[2] }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label class="reservation-field">
+                                <span>Fecha</span>
+                                <input type="date" name="fecha" min="{{ fecha_minima }}" value="{{ form_data.get('fecha', '') }}" required>
+                            </label>
+                            <label class="reservation-field">
+                                <span>Hora de inicio</span>
+                                <input type="time" name="hora" step="300" value="{{ form_data.get('hora', '') }}" required>
+                            </label>
+                        </div>
+
+                        <div class="reservation-attendance-box">
+                            <div><strong>¿Cuántas personas asistirán?</strong><p>Incluye al cliente y a todos sus invitados.</p></div>
+                            <div class="reservation-counter">
+                                <button type="button" data-count-action="minus" data-count-target="cantidad-personas" aria-label="Restar asistente">−</button>
+                                <input id="cantidad-personas" name="cantidad_personas" type="number" min="1" max="40" value="{{ form_data.get('cantidad_personas', '1') }}" required>
+                                <button type="button" data-count-action="plus" data-count-target="cantidad-personas" aria-label="Agregar asistente">+</button>
+                            </div>
+                        </div>
+
+                        <label class="reservation-field">
+                            <span>Observaciones <small>Opcional</small></span>
+                            <textarea name="comentario" maxlength="2000" rows="3" placeholder="Experiencia del grupo o alguna consideración importante.">{{ form_data.get('comentario', '') }}</textarea>
+                        </label>
+                    </fieldset>
+
+                    <fieldset class="reservation-form-panel" data-reservation-panel="institucional"{% if modo_activo != 'institucional' %} hidden disabled{% endif %}>
+                        <header class="reservation-form-section-heading">
+                            <span>02</span>
+                            <div><h2>Programa para grupos e instituciones</h2><p>Cuéntanos quiénes participarán y cómo adaptar la sesión.</p></div>
+                        </header>
+
+                        <h3 class="reservation-subheading">Grupo y responsable</h3>
+                        <div class="reservation-form-grid">
+                            <label class="reservation-field">
+                                <span>Tipo de grupo o institución</span>
+                                <select name="categoria" required>
+                                    <option value="">Selecciona una categoría</option>
+                                    {% for valor, etiqueta in categorias_programa.items() %}
+                                        <option value="{{ valor }}"{% if form_data.get('categoria') == valor %} selected{% endif %}>{{ etiqueta }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label class="reservation-field">
+                                <span>Institución, empresa o grupo</span>
+                                <input type="text" name="nombre_organizacion" maxlength="150" value="{{ form_data.get('nombre_organizacion', '') }}" placeholder="Ejemplo: Colegio San José" required>
+                            </label>
+                            <label class="reservation-field reservation-field-wide">
+                                <span>Nombre del responsable</span>
+                                <input type="text" name="institucion_nombre_cliente" maxlength="100" value="{{ form_data.get('institucion_nombre_cliente', cliente.nombre) }}" autocomplete="name" required>
+                            </label>
+                            <label class="reservation-field">
+                                <span>Teléfono</span>
+                                <input type="tel" name="institucion_celular" maxlength="20" value="{{ form_data.get('institucion_celular', cliente.celular) }}" autocomplete="tel" required>
+                            </label>
+                            <label class="reservation-field">
+                                <span>Correo</span>
+                                <input type="email" name="institucion_correo" maxlength="100" value="{{ form_data.get('institucion_correo', cliente.correo) }}" autocomplete="email" required>
+                            </label>
+                            <label class="reservation-field">
+                                <span>Cantidad total de asistentes</span>
+                                <input id="institucion-cantidad-personas" name="institucion_cantidad_personas" type="number" min="1" max="40" value="{{ form_data.get('institucion_cantidad_personas', '20') }}" required>
+                                <small class="reservation-field-help">Entre 1 y 40 personas.</small>
+                            </label>
+                            <label class="reservation-field">
+                                <span>Rango de edad <small>Opcional</small></span>
+                                <input type="text" name="rango_edad" maxlength="80" value="{{ form_data.get('rango_edad', '') }}" placeholder="Ejemplo: 8 a 12 años">
+                            </label>
+                        </div>
+
+                        <h3 class="reservation-subheading">Servicio y horario</h3>
+                        <div class="reservation-form-grid">
+                            <label class="reservation-field">
+                                <span>Servicio seleccionado</span>
+                                <select name="institucion_servicio_id" required>
+                                    <option value="">Selecciona un servicio</option>
+                                    {% for servicio in servicios %}
+                                        <option value="{{ servicio[0] }}"{% if form_data.get('institucion_servicio_id', '')|string == servicio[0]|string %} selected{% endif %}>{{ servicio[1] }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label class="reservation-field">
+                                <span>Duración</span>
+                                <select name="institucion_duracion_minutos" required>
+                                    {% for duracion in duraciones_programa %}
+                                        <option value="{{ duracion }}"{% if form_data.get('institucion_duracion_minutos', '60')|string == duracion|string %} selected{% endif %}>{{ duracion }} minutos</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label class="reservation-field">
+                                <span>Fecha deseada</span>
+                                <input type="date" name="institucion_fecha" min="{{ fecha_minima }}" value="{{ form_data.get('institucion_fecha', '') }}" required>
+                            </label>
+                            <label class="reservation-field">
+                                <span>Hora de inicio</span>
+                                <input type="time" name="institucion_hora" step="300" value="{{ form_data.get('institucion_hora', '') }}" required>
+                            </label>
+                        </div>
+
+                        <h3 class="reservation-subheading">Lugar y adaptaciones</h3>
+                        <div class="reservation-location-options">
+                            <label class="reservation-location-card">
+                                <input type="radio" name="tipo_lugar" value="local"{% if form_data.get('tipo_lugar', 'local') == 'local' %} checked{% endif %}>
+                                <span><strong>Local de Huancayoga</strong><small>La sesión se realizará en nuestro espacio.</small></span>
+                            </label>
+                            <label class="reservation-location-card">
+                                <input type="radio" name="tipo_lugar" value="externo"{% if form_data.get('tipo_lugar') == 'externo' %} checked{% endif %}>
+                                <span><strong>Instalaciones del cliente</strong><small>Huancayoga se desplazará a la organización.</small></span>
+                            </label>
+                        </div>
+
+                        <label class="reservation-field reservation-external-address" data-external-address>
+                            <span>Dirección de la sesión</span>
+                            <input type="text" name="direccion_externa" maxlength="255" value="{{ form_data.get('direccion_externa', '') }}" placeholder="Dirección, distrito y referencia">
+                        </label>
+
+                        <div class="reservation-form-grid">
+                            <label class="reservation-field reservation-field-wide">
+                                <span>Necesidades de apoyo o adaptaciones <small>Opcional</small></span>
+                                <textarea name="necesidades_apoyo" maxlength="2000" rows="3" placeholder="Movilidad, audición, acompañamiento, sensibilidad sensorial u otros apoyos.">{{ form_data.get('necesidades_apoyo', '') }}</textarea>
+                            </label>
+                            <label class="reservation-field reservation-field-wide">
+                                <span>Observaciones <small>Opcional</small></span>
+                                <textarea name="institucion_comentario" maxlength="2000" rows="3" placeholder="Objetivo de la actividad, características del espacio u otra información importante.">{{ form_data.get('institucion_comentario', '') }}</textarea>
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <footer class="reservation-form-footer">
+                        <p><span aria-hidden="true">●</span> La solicitud quedará pendiente hasta que Huancayoga la confirme.</p>
+                        <button type="submit" class="reservation-submit"><span data-submit-label>Solicitar reserva</span><span aria-hidden="true">→</span></button>
+                    </footer>
+                </form>
+            </section>
+
+            <aside class="reservation-guide">
+                <span class="reservation-guide-label">Cómo funciona</span>
+                <h2>Un horario exclusivo para tu grupo</h2>
+                <ol>
+                    <li><span>1</span><div><strong>Envía tu solicitud</strong><p>Registra la cantidad total y el horario deseado.</p></div></li>
+                    <li><span>2</span><div><strong>Revisamos la agenda</strong><p>El sistema evita cruces con otras reservas activas.</p></div></li>
+                    <li><span>3</span><div><strong>Recibe la confirmación</strong><p>Huancayoga confirmará el servicio y las coordinaciones.</p></div></li>
+                </ol>
+                <div class="reservation-guide-policy"><strong>Capacidad</strong><span data-capacity-preview>1/40 asistentes</span><div><i data-capacity-bar></i></div></div>
+                <p class="reservation-guide-footnote">El máximo incluye al responsable o cliente que realiza la reserva.</p>
+            </aside>
         </div>
-    </section>
+    </main>
 
-    <!-- Bootstrap JS para cerrar alerts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (() => {
+            const modeInput = document.getElementById('tipo-reserva');
+            const modeButtons = [...document.querySelectorAll('[data-reservation-mode]')];
+            const panels = [...document.querySelectorAll('[data-reservation-panel]')];
+            const capacityPreview = document.querySelector('[data-capacity-preview]');
+            const capacityBar = document.querySelector('[data-capacity-bar]');
+            const submitLabel = document.querySelector('[data-submit-label]');
+            const externalAddress = document.querySelector('[data-external-address]');
+            const externalInput = externalAddress.querySelector('input');
+            const locationInputs = [...document.querySelectorAll('input[name="tipo_lugar"]')];
 
+            function activeCountInput() {
+                return modeInput.value === 'institucional'
+                    ? document.getElementById('institucion-cantidad-personas')
+                    : document.getElementById('cantidad-personas');
+            }
+
+            function updateCapacity() {
+                const input = activeCountInput();
+                const count = Math.max(1, Math.min(40, Number(input.value) || 1));
+                capacityPreview.textContent = `${count}/40 asistentes`;
+                capacityBar.style.width = `${count / 40 * 100}%`;
+            }
+
+            function updateLocation() {
+                const selected = document.querySelector('input[name="tipo_lugar"]:checked');
+                const isExternal = selected && selected.value === 'externo';
+                externalAddress.hidden = !isExternal;
+                externalInput.required = Boolean(isExternal);
+                if (!isExternal) externalInput.value = '';
+            }
+
+            function setMode(mode) {
+                modeInput.value = mode;
+                modeButtons.forEach(button => {
+                    const active = button.dataset.reservationMode === mode;
+                    button.classList.toggle('is-active', active);
+                    button.setAttribute('aria-pressed', String(active));
+                });
+                panels.forEach(panel => {
+                    const active = panel.dataset.reservationPanel === mode;
+                    panel.hidden = !active;
+                    panel.disabled = !active;
+                });
+                submitLabel.textContent = mode === 'institucional' ? 'Enviar solicitud privada' : 'Solicitar reserva';
+                updateCapacity();
+            }
+
+            modeButtons.forEach(button => button.addEventListener('click', () => setMode(button.dataset.reservationMode)));
+            document.querySelectorAll('input[type="number"][max="40"]').forEach(input => input.addEventListener('input', updateCapacity));
+            document.querySelectorAll('[data-count-action]').forEach(button => button.addEventListener('click', () => {
+                const input = document.getElementById(button.dataset.countTarget);
+                const delta = button.dataset.countAction === 'plus' ? 1 : -1;
+                input.value = Math.max(1, Math.min(40, (Number(input.value) || 1) + delta));
+                updateCapacity();
+            }));
+            locationInputs.forEach(input => input.addEventListener('change', updateLocation));
+            setMode(modeInput.value);
+            updateLocation();
+        })();
+    </script>
 </body>
 </html>

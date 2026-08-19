@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modalidades de reserva | Prototipo Huancayoga</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=Nunito+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --verde: #155244;
+            --verde-oscuro: #103d34;
+            --verde-medio: #4d8c75;
+            --verde-suave: #e5f1eb;
+            --menta: #f1f7f3;
+            --crema: #f6f1e8;
+            --papel: #fffdf9;
+            --arena: #e5dacb;
+            --terracota: #d57752;
+            --dorado: #d5aa55;
+            --texto: #24332d;
+            --muted: #68746e;
+            --error: #b8443f;
+            --sombra: 0 22px 60px rgba(26, 59, 47, .12);
+        }
+
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            min-height: 100vh;
+            margin: 0;
+            color: var(--texto);
+            background:
+                radial-gradient(circle at 3% 8%, rgba(77, 140, 117, .13), transparent 27rem),
+                radial-gradient(circle at 98% 17%, rgba(213, 119, 82, .1), transparent 29rem),
+                var(--crema);
+            font-family: "Nunito Sans", Arial, sans-serif;
+        }
+
+        button, input, select, textarea { font: inherit; }
+        button, a { -webkit-tap-highlight-color: transparent; }
+
+        .topbar {
+            min-height: 72px;
+            padding: 0 clamp(18px, 5vw, 72px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            color: #fff;
+            background: rgba(16, 61, 52, .98);
+            box-shadow: 0 8px 28px rgba(16, 61, 52, .15);
+        }
+
+        .brand { display: inline-flex; align-items: center; gap: 11px; color: inherit; font: 700 21px "Lora", Georgia, serif; text-decoration: none; }
+        .brand-mark { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.26); border-radius: 50%; background: rgba(255,255,255,.08); }
+        .brand-mark svg { width: 21px; height: 21px; }
+        .top-actions { display: flex; align-items: center; gap: 9px; }
+        .prototype-label { padding: 8px 12px; border: 1px solid rgba(255,255,255,.2); border-radius: 999px; color: rgba(255,255,255,.78); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+        .top-link { padding: 9px 13px; border-radius: 10px; color: var(--verde-oscuro); background: #fff; font-size: 12px; font-weight: 800; text-decoration: none; }
+
+        .page-shell { width: min(1220px, calc(100% - 34px)); margin: 0 auto; padding: 38px 0 52px; }
+        .hero { margin: 0 auto 29px; display: flex; justify-content: space-between; align-items: end; gap: 34px; }
+        .eyebrow { margin: 0 0 7px; color: var(--terracota); font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+        h1 { max-width: 720px; margin: 0; color: var(--verde-oscuro); font: 700 clamp(32px, 4vw, 47px)/1.08 "Lora", Georgia, serif; letter-spacing: -.035em; }
+        .hero-copy { max-width: 420px; margin: 0 0 3px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+
+        .mode-grid { margin-bottom: 25px; display: grid; grid-template-columns: 1fr 1fr; gap: 17px; }
+        .mode-card {
+            position: relative;
+            min-height: 190px;
+            padding: 24px;
+            display: grid;
+            grid-template-columns: 55px 1fr;
+            gap: 18px;
+            border: 1px solid var(--arena);
+            border-radius: 20px;
+            color: var(--texto);
+            background: rgba(255,253,249,.85);
+            cursor: pointer;
+            text-align: left;
+            transition: .22s ease;
+        }
+        .mode-card:hover { border-color: #9fb8ac; transform: translateY(-2px); box-shadow: 0 14px 34px rgba(26,59,47,.09); }
+        .mode-card.active { border: 2px solid var(--verde); padding: 23px; background: #fff; box-shadow: 0 16px 38px rgba(25,72,57,.12); }
+        .mode-icon { width: 55px; height: 55px; display: grid; place-items: center; border-radius: 17px; color: var(--verde); background: var(--verde-suave); }
+        .mode-icon svg { width: 28px; height: 28px; }
+        .mode-card.institutional .mode-icon { color: #a75437; background: #faeae2; }
+        .mode-card h2 { margin: 1px 0 7px; color: var(--verde-oscuro); font: 700 20px "Lora", Georgia, serif; }
+        .mode-card p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+        .mode-details { margin-top: 13px; display: flex; flex-wrap: wrap; gap: 7px; }
+        .mode-details span { padding: 5px 8px; border-radius: 999px; color: var(--verde); background: var(--menta); font-size: 9px; font-weight: 800; }
+        .mode-card.institutional .mode-details span { color: #9c4d33; background: #fcefe8; }
+        .check-indicator { position: absolute; top: 17px; right: 17px; width: 24px; height: 24px; display: grid; place-items: center; border: 1px solid #d6d3cc; border-radius: 50%; color: transparent; background: #fff; font-size: 12px; font-weight: 900; }
+        .mode-card.active .check-indicator { border-color: var(--verde); color: #fff; background: var(--verde); }
+
+        .booking-layout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 20px; align-items: start; }
+        .form-card { padding: 31px; border: 1px solid rgba(83,97,89,.14); border-radius: 23px; background: var(--papel); box-shadow: var(--sombra); }
+        .form-head { margin-bottom: 26px; padding-bottom: 20px; display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; border-bottom: 1px solid #ece5db; }
+        .step-label { margin: 0 0 6px; color: var(--terracota); font-size: 9px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+        .form-head h2 { margin: 0 0 6px; color: var(--verde-oscuro); font: 700 25px "Lora", Georgia, serif; }
+        .form-head p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+        .secure-chip { flex: 0 0 auto; padding: 7px 9px; display: flex; align-items: center; gap: 6px; border-radius: 999px; color: var(--verde); background: var(--verde-suave); font-size: 9px; font-weight: 800; }
+        .secure-chip svg { width: 13px; height: 13px; }
+
+        .form-panel { display: none; }
+        .form-panel.active { display: block; animation: panelIn .26s ease both; }
+        @keyframes panelIn { from { opacity: 0; transform: translateY(5px); } }
+        .section-title { margin: 26px 0 14px; display: flex; align-items: center; gap: 10px; color: var(--verde-oscuro); font-size: 11px; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; }
+        .section-title::after { content: ""; height: 1px; flex: 1; background: #ece6dd; }
+        .section-title:first-child { margin-top: 0; }
+
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .field.full { grid-column: 1 / -1; }
+        .field label, .field-label { margin-bottom: 7px; display: flex; justify-content: space-between; gap: 10px; color: var(--texto); font-size: 10px; font-weight: 800; }
+        .optional { color: #8c938f; font-size: 9px; font-weight: 600; }
+        .field input, .field select, .field textarea {
+            width: 100%;
+            min-height: 47px;
+            padding: 0 13px;
+            border: 1px solid #ddd5ca;
+            border-radius: 11px;
+            outline: none;
+            color: var(--texto);
+            background: #fffefa;
+            font-size: 12px;
+            transition: .18s ease;
+        }
+        .field textarea { min-height: 91px; padding-top: 12px; resize: vertical; }
+        .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--verde-medio); box-shadow: 0 0 0 4px rgba(77,140,117,.1); }
+        .field-help { margin: 5px 0 0; color: #878f8a; font-size: 9px; line-height: 1.4; }
+
+        .profile-note { margin-bottom: 18px; padding: 13px 15px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border: 1px solid #dce8e1; border-radius: 12px; background: var(--menta); }
+        .profile-note strong { display: block; margin-bottom: 2px; color: var(--verde-oscuro); font-size: 11px; }
+        .profile-note span { color: var(--muted); font-size: 9px; }
+        .profile-note a { color: var(--verde); font-size: 9px; font-weight: 800; }
+
+        .attendee-control { min-height: 80px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; gap: 16px; border: 1px solid #ddd5ca; border-radius: 13px; background: #fffefa; }
+        .attendee-control strong { display: block; margin-bottom: 3px; font-size: 11px; }
+        .attendee-control p { margin: 0; color: var(--muted); font-size: 9px; }
+        .counter { display: flex; align-items: center; gap: 11px; }
+        .counter button { width: 32px; height: 32px; border: 1px solid #cfdbd5; border-radius: 9px; color: var(--verde); background: var(--verde-suave); cursor: pointer; font-weight: 900; }
+        .counter output { min-width: 30px; color: var(--verde-oscuro); font-size: 20px; font-weight: 900; text-align: center; }
+        .capacity { margin-top: 9px; display: grid; grid-template-columns: 1fr auto; gap: 7px; align-items: center; color: var(--muted); font-size: 8px; font-weight: 700; }
+        .capacity-track { grid-column: 1 / -1; height: 5px; overflow: hidden; border-radius: 999px; background: #e8e6df; }
+        .capacity-fill { width: 2.5%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--verde-medio), var(--dorado)); transition: width .2s ease; }
+
+        .location-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .location-option { position: relative; padding: 14px; display: grid; grid-template-columns: 31px 1fr; gap: 10px; border: 1px solid #ddd5ca; border-radius: 12px; cursor: pointer; background: #fffefa; }
+        .location-option:has(input:checked) { border-color: var(--verde); background: var(--menta); box-shadow: 0 0 0 2px rgba(77,140,117,.08); }
+        .location-option input { position: absolute; opacity: 0; }
+        .location-icon { width: 31px; height: 31px; display: grid; place-items: center; border-radius: 9px; color: var(--verde); background: var(--verde-suave); }
+        .location-icon svg { width: 17px; height: 17px; }
+        .location-option strong { display: block; margin-bottom: 2px; font-size: 10px; }
+        .location-option span { color: var(--muted); font-size: 8px; line-height: 1.35; }
+        .external-address { display: none; margin-top: 13px; }
+        .external-address.visible { display: block; animation: panelIn .2s ease both; }
+
+        .summary-card { position: sticky; top: 18px; overflow: hidden; border: 1px solid rgba(83,97,89,.14); border-radius: 21px; background: var(--papel); box-shadow: 0 18px 48px rgba(26,59,47,.1); }
+        .summary-visual { min-height: 145px; padding: 24px; display: flex; flex-direction: column; justify-content: space-between; color: #fff; background: linear-gradient(145deg, #174f41, #2d725c); }
+        .summary-visual.institutional { background: linear-gradient(145deg, #a95436, #d17a55); }
+        .summary-badge { align-self: flex-start; padding: 6px 8px; border: 1px solid rgba(255,255,255,.2); border-radius: 999px; background: rgba(255,255,255,.1); font-size: 8px; font-weight: 800; text-transform: uppercase; }
+        .summary-visual h3 { margin: 0; max-width: 250px; font: 700 20px/1.2 "Lora", Georgia, serif; }
+        .summary-body { padding: 21px; }
+        .summary-row { padding: 11px 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; border-bottom: 1px solid #eee8df; font-size: 10px; }
+        .summary-row span { color: var(--muted); }
+        .summary-row strong { max-width: 175px; color: var(--verde-oscuro); text-align: right; }
+        .summary-note { margin: 15px 0; padding: 11px; border-radius: 10px; color: #5e6f68; background: var(--menta); font-size: 9px; line-height: 1.5; }
+        .submit-button { width: 100%; min-height: 49px; border: 0; border-radius: 12px; color: #fff; background: var(--verde); box-shadow: 0 9px 20px rgba(21,82,68,.18); cursor: pointer; font-size: 11px; font-weight: 900; }
+        .submit-button:hover { background: var(--verde-oscuro); }
+        .summary-legal { margin: 10px 0 0; color: #909691; font-size: 8px; line-height: 1.45; text-align: center; }
+
+        .toast { position: fixed; z-index: 20; right: 22px; bottom: 22px; max-width: min(390px,calc(100% - 32px)); padding: 15px 17px; display: flex; gap: 11px; border: 1px solid rgba(77,140,117,.22); border-radius: 14px; background: #fff; box-shadow: 0 18px 46px rgba(20,55,43,.2); opacity: 0; pointer-events: none; transform: translateY(12px); transition: .23s ease; }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast-icon { color: var(--verde); font-weight: 900; }
+        .toast strong { display: block; margin-bottom: 2px; font-size: 11px; }
+        .toast p { margin: 0; color: var(--muted); font-size: 9px; line-height: 1.45; }
+
+        @media (max-width: 900px) {
+            .hero { align-items: flex-start; flex-direction: column; gap: 9px; }
+            .booking-layout { grid-template-columns: 1fr; }
+            .summary-card { position: static; }
+        }
+        @media (max-width: 680px) {
+            .topbar { min-height: 64px; padding: 0 16px; }
+            .brand { font-size: 18px; }
+            .prototype-label { display: none; }
+            .page-shell { width: min(100% - 20px, 560px); padding: 22px 0 30px; }
+            .mode-grid { grid-template-columns: 1fr; }
+            .mode-card { min-height: auto; padding: 20px; }
+            .mode-card.active { padding: 19px; }
+            .form-card { padding: 23px 19px; border-radius: 18px; }
+            .form-head { flex-direction: column; }
+            .form-grid, .location-grid { grid-template-columns: 1fr; }
+            .field.full { grid-column: auto; }
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <a class="brand" href="/" aria-label="Huancayoga">
+            <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20c0-5.2 1.4-9.1 5.7-13.2M12 20c0-4.1-1.7-7.2-5.7-10.3M12.2 15.4c2.8.1 5.1-1.4 6.3-4.1-2.7-.3-5 .8-6.3 4.1ZM11 13c-2.7.2-5-1.2-6.2-3.8 2.6-.4 4.9.7 6.2 3.8Z"/></svg></span>
+            Huancayoga
+        </a>
+        <div class="top-actions">
+            <span class="prototype-label">Prototipo de reservas</span>
+            <a class="top-link" href="/static/prototipos/admin_reservas_modalidades.html">Vista administrativa</a>
+        </div>
+    </header>
+
+    <main class="page-shell">
+        <section class="hero">
+            <div><p class="eyebrow">Reserva tu experiencia</p><h1>Elige la modalidad que mejor se adapta a ti.</h1></div>
+            <p class="hero-copy">Una experiencia personal con invitados o un programa diseñado para tu institución, empresa o comunidad.</p>
+        </section>
+
+        <section class="mode-grid" aria-label="Modalidades de reserva">
+            <button class="mode-card active" type="button" data-mode="regular" aria-pressed="true">
+                <span class="mode-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.3"/><path d="M3.5 19c.5-4 2.3-6 5.5-6s5 2 5.5 6M14 14c3.5-.4 5.6 1.3 6.2 4.7"/></svg></span>
+                <span><h2>Clase regular o grupal</h2><p>Reserva para ti y tus invitados. Capacidad máxima de 40 asistentes por horario.</p><span class="mode-details"><span>1–40 asistentes</span><span>En Huancayoga</span><span>Confirmación rápida</span></span></span>
+                <span class="check-indicator">✓</span>
+            </button>
+            <button class="mode-card institutional" type="button" data-mode="institutional" aria-pressed="false">
+                <span class="mode-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20V7l8-4 8 4v13M8 20v-5h8v5M8 9h.01M12 9h.01M16 9h.01M8 12h.01M12 12h.01M16 12h.01"/></svg></span>
+                <span><h2>Programa para grupos e instituciones</h2><p>Solicita una sesión privada para colegios, institutos, empresas, niños, adultos mayores o grupos que necesiten una clase adaptada.</p><span class="mode-details"><span>Programa privado</span><span>Local o externo</span><span>Sesión adaptada</span></span></span>
+                <span class="check-indicator">✓</span>
+            </button>
+        </section>
+
+        <section class="booking-layout">
+            <div class="form-card">
+                <header class="form-head">
+                    <div><p class="step-label">Paso 2 de 2</p><h2 id="form-title">Datos de tu clase</h2><p id="form-description">Completa los detalles de la reserva para ti y tus invitados.</p></div>
+                    <span class="secure-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-3 7-9V5l-7-3-7 3v7c0 6 7 9 7 9Z"/><path d="m9 12 2 2 4-4"/></svg> Datos protegidos</span>
+                </header>
+
+                <form id="booking-form" novalidate>
+                    <div class="form-panel active" data-panel="regular">
+                        <div class="profile-note"><div><strong>Reservando como Andrea Salazar</strong><span>DNI confirmado · andrea@email.com</span></div><a href="#">Editar contacto</a></div>
+                        <p class="section-title">Clase y asistentes</p>
+                        <div class="form-grid">
+                            <div class="field full"><label for="regular-service">Servicio</label><select id="regular-service" required><option value="">Selecciona una clase</option><option>Yoga integral · 60 min</option><option>Meditación guiada · 45 min</option><option>Yoga terapéutico · 60 min</option><option>Sesión de respiración · 45 min</option></select></div>
+                            <div class="field full">
+                                <span class="field-label">Cantidad total de asistentes <span class="optional">Incluyéndote</span></span>
+                                <div class="attendee-control"><div><strong>¿Cuántas personas asistirán?</strong><p>Tú y tus invitados forman una sola reserva.</p></div><div class="counter"><button type="button" data-counter="minus" aria-label="Restar persona">−</button><output id="regular-count">1</output><button type="button" data-counter="plus" aria-label="Agregar persona">+</button></div></div>
+                                <div class="capacity"><span>Ocupación del grupo</span><strong id="regular-capacity">1/40</strong><div class="capacity-track"><div class="capacity-fill" id="regular-capacity-fill"></div></div></div>
+                            </div>
+                        </div>
+                        <p class="section-title">Fecha y horario</p>
+                        <div class="form-grid">
+                            <div class="field"><label for="regular-date">Fecha</label><input id="regular-date" type="date" required></div>
+                            <div class="field"><label for="regular-time">Hora disponible</label><select id="regular-time" required><option value="">Selecciona una hora</option><option>08:00</option><option>10:00</option><option>16:00</option><option>18:00</option></select><p class="field-help">Solo aparecen horarios sin otra reserva activa.</p></div>
+                            <div class="field full"><label for="regular-notes">Comentario <span class="optional">Opcional</span></label><textarea id="regular-notes" placeholder="Cuéntanos si es la primera clase del grupo o si debemos considerar algo."></textarea></div>
+                        </div>
+                    </div>
+
+                    <div class="form-panel" data-panel="institutional">
+                        <p class="section-title">Organización y responsable</p>
+                        <div class="form-grid">
+                            <div class="field"><label for="group-type">Tipo de grupo o institución</label><select id="group-type" required><option value="">Selecciona una categoría</option><option>Colegio</option><option>Instituto</option><option>Universidad</option><option>Programa corporativo para empresas</option><option>Yoga para niños</option><option>Yoga para adultos mayores</option><option>Yoga inclusivo o adaptado</option><option>Asociación o grupo familiar</option><option>Otro grupo</option></select></div>
+                            <div class="field"><label for="organization">Institución, empresa o grupo</label><input id="organization" type="text" placeholder="Ejemplo: Colegio San José" required></div>
+                            <div class="field"><label for="responsible">Nombre del responsable</label><input id="responsible" type="text" placeholder="Nombre y apellidos" required></div>
+                            <div class="field"><label for="institution-phone">Teléfono</label><input id="institution-phone" type="tel" inputmode="numeric" placeholder="9 dígitos" required></div>
+                            <div class="field"><label for="institution-email">Correo</label><input id="institution-email" type="email" placeholder="contacto@institucion.com" required></div>
+                            <div class="field"><label for="institution-count">Cantidad total de asistentes</label><input id="institution-count" type="number" min="1" max="40" value="20" required><p class="field-help">Entre 1 y 40 asistentes.</p></div>
+                        </div>
+
+                        <p class="section-title">Programa y horario</p>
+                        <div class="form-grid">
+                            <div class="field"><label for="institution-service">Servicio seleccionado</label><select id="institution-service" required><option value="">Selecciona un programa</option><option>Yoga integral</option><option>Meditación y manejo del estrés</option><option>Yoga adaptado</option><option>Sesión personalizada por coordinar</option></select></div>
+                            <div class="field"><label for="duration">Duración</label><select id="duration" required><option value="60">60 minutos</option><option value="90">90 minutos</option><option value="120">120 minutos</option><option value="coordinar">Por coordinar</option></select></div>
+                            <div class="field"><label for="institution-date">Fecha deseada</label><input id="institution-date" type="date" required></div>
+                            <div class="field"><label for="institution-time">Hora de inicio</label><input id="institution-time" type="time" required></div>
+                        </div>
+
+                        <p class="section-title">Lugar y adaptaciones</p>
+                        <span class="field-label">Lugar de la sesión</span>
+                        <div class="location-grid">
+                            <label class="location-option"><input type="radio" name="location" value="local" checked><span class="location-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20V7l8-4 8 4v13M8 20v-5h8v5"/></svg></span><span><strong>Local de Huancayoga</strong><span>La sesión se realizará en nuestro espacio.</span></span></label>
+                            <label class="location-option"><input type="radio" name="location" value="external"><span class="location-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg></span><span><strong>Instalaciones del cliente</strong><span>Iremos a la dirección de la organización.</span></span></label>
+                        </div>
+                        <div class="field external-address" id="external-address"><label for="address">Dirección de la sesión</label><input id="address" type="text" placeholder="Dirección, distrito y referencia"></div>
+                        <div class="form-grid" style="margin-top:16px">
+                            <div class="field"><label for="age-range">Rango de edad <span class="optional">Opcional</span></label><input id="age-range" type="text" placeholder="Ejemplo: 8 a 12 años"></div>
+                            <div class="field"><label for="support">Necesidades de apoyo <span class="optional">Opcional</span></label><input id="support" type="text" placeholder="Movilidad, audición, acompañamiento..."></div>
+                            <div class="field full"><label for="institution-notes">Observaciones <span class="optional">Opcional</span></label><textarea id="institution-notes" placeholder="Objetivo de la actividad, características del espacio u otra información importante."></textarea></div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <aside class="summary-card">
+                <div class="summary-visual" id="summary-visual"><span class="summary-badge" id="summary-badge">Clase regular</span><h3 id="summary-title">Tu clase, un horario reservado para tu grupo.</h3></div>
+                <div class="summary-body">
+                    <div class="summary-row"><span>Modalidad</span><strong id="summary-mode">Regular o grupal</strong></div>
+                    <div class="summary-row"><span>Asistentes</span><strong id="summary-attendees">1 de 40</strong></div>
+                    <div class="summary-row"><span>Lugar</span><strong id="summary-location">Local de Huancayoga</strong></div>
+                    <div class="summary-row"><span>Confirmación</span><strong id="summary-confirmation">Revisión de disponibilidad</strong></div>
+                    <p class="summary-note" id="summary-note">Al enviar la reserva, este horario quedará bloqueado para tu grupo mientras Huancayoga confirma la solicitud.</p>
+                    <button class="submit-button" id="submit-prototype" type="button">Enviar solicitud de reserva</button>
+                    <p class="summary-legal">Prototipo visual. No se guardará ni enviará información.</p>
+                </div>
+            </aside>
+        </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"><span class="toast-icon">✓</span><div><strong>Así finalizaría la solicitud</strong><p id="toast-message">La dueña recibiría la reserva con todos sus detalles.</p></div></div>
+
+    <script>
+        const state = { mode: 'regular', regularCount: 1 };
+        const modeCards = [...document.querySelectorAll('[data-mode]')];
+        const panels = [...document.querySelectorAll('[data-panel]')];
+        const countOutput = document.getElementById('regular-count');
+        const capacityText = document.getElementById('regular-capacity');
+        const capacityFill = document.getElementById('regular-capacity-fill');
+        const institutionalCount = document.getElementById('institution-count');
+        const toast = document.getElementById('toast');
+        let toastTimer;
+
+        function updateSummary() {
+            const institutional = state.mode === 'institutional';
+            const attendees = institutional ? Math.max(1, Math.min(40, Number(institutionalCount.value) || 1)) : state.regularCount;
+            document.getElementById('summary-visual').classList.toggle('institutional', institutional);
+            document.getElementById('summary-badge').textContent = institutional ? 'Programa privado' : 'Clase regular';
+            document.getElementById('summary-title').textContent = institutional ? 'Una experiencia diseñada para tu comunidad.' : 'Tu clase, un horario reservado para tu grupo.';
+            document.getElementById('summary-mode').textContent = institutional ? 'Grupo o institución' : 'Regular o grupal';
+            document.getElementById('summary-attendees').textContent = `${attendees} de 40`;
+            const location = document.querySelector('input[name="location"]:checked')?.value;
+            document.getElementById('summary-location').textContent = institutional && location === 'external' ? 'Instalaciones del cliente' : 'Local de Huancayoga';
+            document.getElementById('summary-confirmation').textContent = institutional ? 'Coordinación personalizada' : 'Revisión de disponibilidad';
+            document.getElementById('summary-note').textContent = institutional ? 'Huancayoga revisará horario, espacio, adaptaciones y duración antes de confirmar el programa.' : 'Al enviar la reserva, este horario quedará bloqueado para tu grupo mientras Huancayoga confirma la solicitud.';
+        }
+
+        function selectMode(mode) {
+            state.mode = mode;
+            modeCards.forEach(card => { const active = card.dataset.mode === mode; card.classList.toggle('active', active); card.setAttribute('aria-pressed', String(active)); });
+            panels.forEach(panel => panel.classList.toggle('active', panel.dataset.panel === mode));
+            document.getElementById('form-title').textContent = mode === 'regular' ? 'Datos de tu clase' : 'Datos del programa privado';
+            document.getElementById('form-description').textContent = mode === 'regular' ? 'Completa los detalles de la reserva para ti y tus invitados.' : 'Cuéntanos sobre el grupo para preparar una propuesta adecuada.';
+            updateSummary();
+            document.querySelector('.form-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        modeCards.forEach(card => card.addEventListener('click', () => selectMode(card.dataset.mode)));
+        document.querySelector('[data-counter="minus"]').addEventListener('click', () => { state.regularCount = Math.max(1, state.regularCount - 1); updateCount(); });
+        document.querySelector('[data-counter="plus"]').addEventListener('click', () => { state.regularCount = Math.min(40, state.regularCount + 1); updateCount(); });
+        function updateCount() { countOutput.textContent = state.regularCount; capacityText.textContent = `${state.regularCount}/40`; capacityFill.style.width = `${state.regularCount / 40 * 100}%`; updateSummary(); }
+        institutionalCount.addEventListener('input', () => { if (institutionalCount.value > 40) institutionalCount.value = 40; updateSummary(); });
+        document.querySelectorAll('input[name="location"]').forEach(input => input.addEventListener('change', () => { const external = input.value === 'external' && input.checked; document.getElementById('external-address').classList.toggle('visible', external); document.getElementById('address').required = external; updateSummary(); }));
+
+        document.getElementById('submit-prototype').addEventListener('click', () => {
+            document.getElementById('toast-message').textContent = state.mode === 'institutional' ? 'La administradora recibiría categoría, organización, asistentes, lugar, adaptaciones y horario.' : 'La administradora recibiría una sola reserva con el total de asistentes y el horario bloqueado.';
+            toast.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('show'), 4200);
+        });
+        updateCount();
+    </script>
+</body>
+</html>

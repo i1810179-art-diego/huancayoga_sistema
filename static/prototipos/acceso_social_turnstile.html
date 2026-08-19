@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prototipo de acceso seguro | Huancayoga</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=Nunito+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --verde: #164f40;
+            --verde-profundo: #103c32;
+            --verde-medio: #4d8b75;
+            --verde-suave: #e5f1eb;
+            --menta: #f1f7f3;
+            --crema: #f5f0e7;
+            --papel: #fffdf9;
+            --arena: #dfd4c4;
+            --terracota: #d57650;
+            --dorado: #d5aa55;
+            --texto: #22332d;
+            --muted: #67736e;
+            --borde: #e6ddd0;
+            --error: #b8443f;
+            --sombra: 0 24px 70px rgba(26, 59, 47, .14);
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body { margin: 0; min-height: 100%; }
+
+        body {
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at 6% 8%, rgba(76, 139, 116, .15), transparent 28rem),
+                radial-gradient(circle at 96% 92%, rgba(213, 118, 80, .13), transparent 28rem),
+                var(--crema);
+            color: var(--texto);
+            font-family: "Nunito Sans", Arial, sans-serif;
+        }
+
+        button, input { font: inherit; }
+        button, a { -webkit-tap-highlight-color: transparent; }
+
+        .topbar {
+            min-height: 72px;
+            padding: 0 clamp(20px, 5vw, 72px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            color: #fff;
+            background: var(--verde-profundo);
+            box-shadow: 0 8px 30px rgba(16, 60, 50, .15);
+        }
+
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 11px;
+            color: inherit;
+            font-family: "Lora", Georgia, serif;
+            font-size: 21px;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .brand-mark {
+            width: 38px;
+            height: 38px;
+            display: grid;
+            place-items: center;
+            border: 1px solid rgba(255, 255, 255, .28);
+            border-radius: 50%;
+            background: rgba(255, 255, 255, .08);
+        }
+
+        .brand-mark svg { width: 21px; height: 21px; }
+
+        .top-actions { display: flex; align-items: center; gap: 10px; }
+
+        .prototype-label {
+            padding: 8px 12px;
+            border: 1px solid rgba(255, 255, 255, .22);
+            border-radius: 999px;
+            color: rgba(255, 255, 255, .8);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: .09em;
+            text-transform: uppercase;
+        }
+
+        .back-link {
+            padding: 9px 14px;
+            border-radius: 10px;
+            color: var(--verde-profundo);
+            background: #fff;
+            font-size: 13px;
+            font-weight: 800;
+            text-decoration: none;
+        }
+
+        .page-shell {
+            width: min(1180px, calc(100% - 34px));
+            margin: 0 auto;
+            padding: 34px 0 44px;
+        }
+
+        .access-shell {
+            min-height: 720px;
+            display: grid;
+            grid-template-columns: minmax(0, .86fr) minmax(520px, 1.14fr);
+            overflow: hidden;
+            border: 1px solid rgba(83, 97, 89, .14);
+            border-radius: 28px;
+            background: var(--papel);
+            box-shadow: var(--sombra);
+        }
+
+        .welcome-panel {
+            position: relative;
+            min-height: 100%;
+            overflow: hidden;
+            padding: 46px 44px;
+            display: flex;
+            flex-direction: column;
+            color: #fff;
+            background:
+                linear-gradient(150deg, rgba(19, 70, 57, .97), rgba(29, 91, 72, .93)),
+                var(--verde);
+        }
+
+        .welcome-panel::before,
+        .welcome-panel::after {
+            content: "";
+            position: absolute;
+            border: 1px solid rgba(255, 255, 255, .09);
+            border-radius: 50%;
+        }
+
+        .welcome-panel::before {
+            width: 390px;
+            height: 390px;
+            left: -180px;
+            bottom: -170px;
+            box-shadow: 0 0 0 52px rgba(255, 255, 255, .025), 0 0 0 104px rgba(255, 255, 255, .018);
+        }
+
+        .welcome-panel::after {
+            width: 240px;
+            height: 240px;
+            right: -90px;
+            top: -100px;
+            box-shadow: 0 0 0 42px rgba(255, 255, 255, .025);
+        }
+
+        .welcome-content { position: relative; z-index: 2; }
+
+        .eyebrow {
+            margin: 0 0 16px;
+            color: #f2c782;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+        }
+
+        .welcome-panel h1 {
+            max-width: 430px;
+            margin: 0 0 17px;
+            font-family: "Lora", Georgia, serif;
+            font-size: clamp(34px, 4vw, 50px);
+            line-height: 1.08;
+            letter-spacing: -.035em;
+        }
+
+        .welcome-copy {
+            max-width: 410px;
+            margin: 0;
+            color: rgba(255, 255, 255, .76);
+            font-size: 15px;
+            line-height: 1.65;
+        }
+
+        .journey {
+            position: relative;
+            z-index: 2;
+            margin-top: 46px;
+            display: grid;
+            gap: 24px;
+        }
+
+        .journey-item {
+            position: relative;
+            display: grid;
+            grid-template-columns: 38px 1fr;
+            gap: 14px;
+            align-items: start;
+        }
+
+        .journey-item:not(:last-child)::after {
+            content: "";
+            position: absolute;
+            width: 1px;
+            height: 28px;
+            left: 18px;
+            top: 42px;
+            background: rgba(255, 255, 255, .23);
+        }
+
+        .journey-number {
+            width: 38px;
+            height: 38px;
+            display: grid;
+            place-items: center;
+            border: 1px solid rgba(255, 255, 255, .24);
+            border-radius: 12px;
+            color: #fff;
+            background: rgba(255, 255, 255, .1);
+            font-weight: 800;
+        }
+
+        .journey-item strong {
+            display: block;
+            margin: 1px 0 3px;
+            font-size: 14px;
+        }
+
+        .journey-item p {
+            margin: 0;
+            color: rgba(255, 255, 255, .65);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .privacy-card {
+            position: relative;
+            z-index: 2;
+            margin-top: auto;
+            padding: 17px;
+            display: flex;
+            gap: 12px;
+            border: 1px solid rgba(255, 255, 255, .15);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, .08);
+            backdrop-filter: blur(10px);
+        }
+
+        .privacy-icon {
+            flex: 0 0 auto;
+            width: 34px;
+            height: 34px;
+            display: grid;
+            place-items: center;
+            border-radius: 10px;
+            color: #f2c782;
+            background: rgba(255, 255, 255, .09);
+        }
+
+        .privacy-icon svg { width: 18px; height: 18px; }
+
+        .privacy-card strong { display: block; margin-bottom: 3px; font-size: 13px; }
+        .privacy-card p { margin: 0; color: rgba(255, 255, 255, .67); font-size: 11px; line-height: 1.5; }
+
+        .form-panel {
+            padding: 37px clamp(28px, 5vw, 62px) 38px;
+            background: var(--papel);
+        }
+
+        .tabs {
+            width: 100%;
+            padding: 4px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px;
+            border-radius: 13px;
+            background: #f0ece5;
+        }
+
+        .tab {
+            min-height: 43px;
+            border: 0;
+            border-radius: 10px;
+            color: var(--muted);
+            background: transparent;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 800;
+            transition: .2s ease;
+        }
+
+        .tab.active {
+            color: var(--verde);
+            background: #fff;
+            box-shadow: 0 4px 12px rgba(36, 61, 51, .08);
+        }
+
+        .form-heading { margin: 27px 0 23px; }
+
+        .form-heading h2 {
+            margin: 0 0 7px;
+            color: var(--verde-profundo);
+            font-family: "Lora", Georgia, serif;
+            font-size: 29px;
+            letter-spacing: -.025em;
+        }
+
+        .form-heading p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+
+        .steps {
+            margin-bottom: 25px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .step {
+            position: relative;
+            padding-top: 8px;
+            color: #9a9f9c;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+        }
+
+        .step::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            border-radius: 999px;
+            background: #e8e5de;
+            transition: .25s ease;
+        }
+
+        .step.active { color: var(--verde); }
+        .step.active::before { background: var(--verde); }
+        .step.done::before { background: var(--verde-medio); }
+
+        .field-label {
+            margin-bottom: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            color: var(--texto);
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .required-note { color: var(--muted); font-size: 10px; font-weight: 600; }
+
+        .input-wrap { position: relative; }
+
+        .input-wrap svg {
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            left: 15px;
+            top: 50%;
+            color: #7b8882;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+        .input-wrap input {
+            width: 100%;
+            height: 52px;
+            padding: 0 50px 0 45px;
+            border: 1px solid #dcd5ca;
+            border-radius: 13px;
+            outline: none;
+            color: var(--texto);
+            background: #fffefa;
+            letter-spacing: .08em;
+            transition: .2s ease;
+        }
+
+        .input-wrap input:focus {
+            border-color: var(--verde-medio);
+            box-shadow: 0 0 0 4px rgba(77, 139, 117, .12);
+        }
+
+        .input-wrap.valid input { padding-right: 48px; border-color: var(--verde-medio); }
+
+        .valid-mark {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            right: 14px;
+            top: 50%;
+            display: none;
+            place-items: center;
+            border-radius: 50%;
+            color: #fff;
+            background: var(--verde-medio);
+            font-size: 13px;
+            font-weight: 800;
+            transform: translateY(-50%);
+        }
+
+        .input-wrap.valid .valid-mark { display: grid; }
+
+        .field-help {
+            min-height: 18px;
+            margin: 7px 0 0;
+            color: var(--muted);
+            font-size: 11px;
+        }
+
+        .field-help.error { color: var(--error); }
+
+        .primary-button {
+            width: 100%;
+            min-height: 50px;
+            margin-top: 13px;
+            border: 0;
+            border-radius: 13px;
+            color: #fff;
+            background: var(--verde);
+            box-shadow: 0 10px 22px rgba(22, 79, 64, .17);
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 800;
+            transition: transform .18s ease, background .18s ease;
+        }
+
+        .primary-button:hover { background: var(--verde-profundo); transform: translateY(-1px); }
+
+        .verification-area {
+            max-height: 0;
+            margin-top: 0;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(-5px);
+            transition: max-height .35s ease, opacity .25s ease, transform .25s ease, margin .25s ease;
+        }
+
+        .verification-area.visible {
+            max-height: 180px;
+            margin-top: 18px;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .turnstile-widget {
+            min-height: 72px;
+            padding: 13px 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            border: 1px solid #d7d9d6;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+
+        .turnstile-check {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border: 0;
+            color: #2e3733;
+            background: transparent;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .check-box {
+            width: 28px;
+            height: 28px;
+            display: grid;
+            place-items: center;
+            border: 2px solid #737b77;
+            border-radius: 5px;
+            color: #fff;
+            background: #fff;
+            transition: .2s ease;
+        }
+
+        .turnstile-widget.verified .check-box {
+            border-color: var(--verde-medio);
+            background: var(--verde-medio);
+        }
+
+        .check-box svg { width: 18px; height: 18px; opacity: 0; transform: scale(.6); transition: .2s ease; }
+        .turnstile-widget.verified .check-box svg { opacity: 1; transform: scale(1); }
+
+        .turnstile-brand { text-align: center; color: #4e5652; font-size: 8px; line-height: 1.25; }
+        .turnstile-brand svg { width: 28px; height: 28px; display: block; margin: 0 auto 2px; color: #f38020; }
+        .turnstile-brand span { display: block; font-size: 7px; color: #7a807d; }
+
+        .prototype-widget-note {
+            margin: 6px 0 0;
+            color: #8a918d;
+            font-size: 9px;
+            text-align: right;
+        }
+
+        .social-area {
+            max-height: 0;
+            margin-top: 0;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(-5px);
+            transition: max-height .4s ease, opacity .25s ease, transform .25s ease, margin .25s ease;
+        }
+
+        .social-area.visible {
+            max-height: 440px;
+            margin-top: 22px;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .section-caption {
+            margin: 0 0 10px;
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .social-stack { display: grid; gap: 9px; }
+
+        .social-button {
+            width: 100%;
+            min-height: 49px;
+            padding: 0 18px;
+            display: grid;
+            grid-template-columns: 28px 1fr 28px;
+            align-items: center;
+            border: 1px solid #dcd7ce;
+            border-radius: 13px;
+            color: #2a332f;
+            background: #fff;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 800;
+            transition: border-color .18s ease, background .18s ease, transform .18s ease;
+        }
+
+        .social-button:hover { border-color: #aeb9b3; background: #fdfcf9; transform: translateY(-1px); }
+        .social-icon { width: 24px; height: 24px; display: grid; place-items: center; }
+        .social-icon svg { max-width: 22px; max-height: 22px; }
+        .social-arrow { color: #8d9792; font-size: 18px; }
+
+        .divider {
+            margin: 17px 0 13px;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            gap: 11px;
+            color: #9a9f9d;
+            font-size: 10px;
+        }
+
+        .divider::before, .divider::after { content: ""; height: 1px; background: #ebe6de; }
+
+        .password-link {
+            width: 100%;
+            border: 0;
+            color: var(--verde);
+            background: transparent;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .terms {
+            margin: 18px auto 0;
+            max-width: 390px;
+            color: #818985;
+            font-size: 10px;
+            line-height: 1.55;
+            text-align: center;
+        }
+
+        .terms a { color: var(--verde); font-weight: 700; }
+
+        .toast {
+            position: fixed;
+            z-index: 20;
+            right: 24px;
+            bottom: 24px;
+            max-width: min(380px, calc(100% - 32px));
+            padding: 15px 17px;
+            display: flex;
+            align-items: flex-start;
+            gap: 11px;
+            border: 1px solid rgba(77, 139, 117, .24);
+            border-radius: 15px;
+            color: var(--texto);
+            background: #fff;
+            box-shadow: 0 18px 45px rgba(20, 55, 43, .2);
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(14px);
+            transition: .25s ease;
+        }
+
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast-icon { color: var(--verde-medio); font-size: 18px; }
+        .toast strong { display: block; margin-bottom: 2px; font-size: 12px; }
+        .toast p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+
+        .modal-backdrop {
+            position: fixed;
+            z-index: 30;
+            inset: 0;
+            padding: 20px;
+            display: none;
+            place-items: center;
+            background: rgba(15, 40, 32, .57);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-backdrop.open { display: grid; }
+
+        .modal {
+            width: min(430px, 100%);
+            padding: 29px;
+            border: 1px solid rgba(255, 255, 255, .5);
+            border-radius: 22px;
+            background: var(--papel);
+            box-shadow: 0 30px 90px rgba(11, 34, 27, .3);
+            text-align: center;
+            animation: modalIn .22s ease both;
+        }
+
+        @keyframes modalIn { from { opacity: 0; transform: scale(.96) translateY(8px); } }
+
+        .modal-provider {
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 17px;
+            display: grid;
+            place-items: center;
+            border: 1px solid var(--borde);
+            border-radius: 17px;
+            background: #fff;
+            box-shadow: 0 8px 22px rgba(33, 55, 46, .08);
+            font-size: 24px;
+            font-weight: 800;
+        }
+
+        .modal h3 { margin: 0 0 9px; color: var(--verde-profundo); font-family: "Lora", Georgia, serif; font-size: 22px; }
+        .modal p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+
+        .modal-summary {
+            margin: 19px 0;
+            padding: 13px 15px;
+            border-radius: 12px;
+            background: var(--menta);
+            color: var(--verde-profundo);
+            font-size: 11px;
+            text-align: left;
+        }
+
+        .modal-actions { display: grid; grid-template-columns: .8fr 1.2fr; gap: 9px; }
+        .modal-actions button { min-height: 44px; border-radius: 11px; cursor: pointer; font-size: 12px; font-weight: 800; }
+        .modal-cancel { border: 1px solid #dcd7ce; color: var(--texto); background: #fff; }
+        .modal-continue { border: 0; color: #fff; background: var(--verde); }
+
+        @media (max-width: 900px) {
+            .access-shell { grid-template-columns: 1fr; }
+            .welcome-panel { min-height: auto; padding: 34px; }
+            .welcome-panel h1 { font-size: 37px; }
+            .journey { margin-top: 30px; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+            .journey-item { grid-template-columns: 1fr; gap: 7px; }
+            .journey-item:not(:last-child)::after { display: none; }
+            .privacy-card { margin-top: 30px; }
+        }
+
+        @media (max-width: 620px) {
+            .topbar { min-height: 64px; padding: 0 17px; }
+            .brand { font-size: 18px; }
+            .prototype-label { display: none; }
+            .page-shell { width: min(100% - 20px, 540px); padding: 14px 0 24px; }
+            .access-shell { border-radius: 20px; }
+            .welcome-panel { padding: 28px 24px; }
+            .welcome-panel h1 { font-size: 31px; }
+            .welcome-copy { font-size: 13px; }
+            .journey { display: none; }
+            .privacy-card { margin-top: 24px; }
+            .form-panel { padding: 25px 21px 28px; }
+            .form-heading { margin: 23px 0 20px; }
+            .form-heading h2 { font-size: 25px; }
+            .steps { gap: 5px; }
+            .step { font-size: 8px; }
+            .turnstile-widget { padding: 12px; }
+            .modal-actions { grid-template-columns: 1fr; }
+            .toast { right: 16px; bottom: 16px; }
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <a class="brand" href="#" aria-label="Huancayoga">
+            <span class="brand-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M12 20c0-5.2 1.4-9.1 5.7-13.2M12 20c0-4.1-1.7-7.2-5.7-10.3M12.2 15.4c2.8.1 5.1-1.4 6.3-4.1-2.7-.3-5 .8-6.3 4.1ZM11 13c-2.7.2-5-1.2-6.2-3.8 2.6-.4 4.9.7 6.2 3.8Z"/>
+                </svg>
+            </span>
+            Huancayoga
+        </a>
+        <div class="top-actions">
+            <span class="prototype-label">Prototipo interactivo</span>
+            <a class="back-link" href="/">Volver al inicio</a>
+        </div>
+    </header>
+
+    <main class="page-shell">
+        <section class="access-shell" aria-label="Prototipo de acceso de clientes">
+            <aside class="welcome-panel">
+                <div class="welcome-content">
+                    <p class="eyebrow">Tu espacio personal</p>
+                    <h1>Tu bienestar, ahora más cerca.</h1>
+                    <p class="welcome-copy">Accede a tus reservas, pedidos y experiencias con una cuenta que ya utilizas.</p>
+                </div>
+
+                <div class="journey" aria-label="Pasos del acceso">
+                    <div class="journey-item">
+                        <span class="journey-number">1</span>
+                        <div><strong>Confirma tu DNI</strong><p>Identificamos tu ficha de cliente de forma segura.</p></div>
+                    </div>
+                    <div class="journey-item">
+                        <span class="journey-number">2</span>
+                        <div><strong>Verificación inteligente</strong><p>Turnstile bloquea intentos automáticos y abusos.</p></div>
+                    </div>
+                    <div class="journey-item">
+                        <span class="journey-number">3</span>
+                        <div><strong>Elige cómo entrar</strong><p>Continúa con Google, Facebook o TikTok.</p></div>
+                    </div>
+                </div>
+
+                <div class="privacy-card">
+                    <span class="privacy-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <rect x="5" y="10" width="14" height="10" rx="3"/><path d="M8.5 10V7.5a3.5 3.5 0 0 1 7 0V10M12 14v2.5"/>
+                        </svg>
+                    </span>
+                    <div><strong>Tu DNI sigue siendo privado</strong><p>No se comparte con Google, Facebook ni TikTok. Solo Huancayoga lo utiliza para validar tu registro.</p></div>
+                </div>
+            </aside>
+
+            <div class="form-panel">
+                <div class="tabs" role="tablist" aria-label="Tipo de acceso">
+                    <button class="tab active" type="button" data-mode="login" role="tab" aria-selected="true">Ingresar</button>
+                    <button class="tab" type="button" data-mode="register" role="tab" aria-selected="false">Crear cuenta</button>
+                </div>
+
+                <div class="form-heading">
+                    <h2 id="form-title">Qué bueno verte</h2>
+                    <p id="form-copy">Primero ingresa tu DNI. Después podrás elegir tu forma de acceso.</p>
+                </div>
+
+                <div class="steps" aria-label="Progreso">
+                    <span class="step active" id="step-dni">1. DNI</span>
+                    <span class="step" id="step-security">2. Seguridad</span>
+                    <span class="step" id="step-social">3. Acceso</span>
+                </div>
+
+                <form id="access-form" novalidate>
+                    <label class="field-label" for="dni">
+                        Documento Nacional de Identidad
+                        <span class="required-note">8 dígitos</span>
+                    </label>
+                    <div class="input-wrap" id="dni-wrap">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+                            <rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="8" cy="11" r="2"/><path d="M5.5 16c.6-1.5 1.5-2.2 2.5-2.2s1.9.7 2.5 2.2M13 10h5M13 14h5"/>
+                        </svg>
+                        <input id="dni" name="dni" type="text" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="Ejemplo: 75189024" aria-describedby="dni-help">
+                        <span class="valid-mark" aria-hidden="true">✓</span>
+                    </div>
+                    <p class="field-help" id="dni-help">Obligatorio antes de usar cualquier cuenta social.</p>
+
+                    <button class="primary-button" id="dni-button" type="submit">Continuar de forma segura</button>
+
+                    <div class="verification-area" id="verification-area" aria-hidden="true">
+                        <div class="turnstile-widget" id="turnstile-widget">
+                            <button class="turnstile-check" id="turnstile-check" type="button">
+                                <span class="check-box" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m5 12 4 4L19 6"/></svg>
+                                </span>
+                                <span id="turnstile-text">Verificar que soy una persona</span>
+                            </button>
+                            <div class="turnstile-brand" aria-label="Cloudflare Turnstile simulado">
+                                <svg viewBox="0 0 48 48" fill="currentColor" aria-hidden="true"><path d="M32.8 31.7H9.4c-.5 0-.9-.3-1-.8-.5-2.4.2-4.7 1.9-6.4 1.5-1.5 3.5-2.2 5.5-1.9 1.2-3.9 4.8-6.7 9.1-6.7 5.1 0 9.2 4 9.5 9 2.9.3 5.1 2.7 5.1 5.7 0 .4 0 .7-.1 1.1h-6.6Z"/><path d="M39.4 33.6H14.2c-.4 0-.7.3-.7.7s.3.7.7.7h24.5c.3-.4.5-.9.7-1.4Z"/></svg>
+                                Turnstile
+                                <span>Privacidad · Ayuda</span>
+                            </div>
+                        </div>
+                        <p class="prototype-widget-note">Simulación visual: no usa una clave real</p>
+                    </div>
+
+                    <div class="social-area" id="social-area" aria-hidden="true">
+                        <p class="section-caption" id="social-caption">DNI verificado. Ahora elige cómo ingresar.</p>
+                        <div class="social-stack">
+                            <button class="social-button" type="button" data-provider="Google">
+                                <span class="social-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M21.6 12.2c0-.7-.1-1.4-.2-2.1H12v4h5.4a4.6 4.6 0 0 1-2 3v2.6h3.3c1.9-1.8 2.9-4.4 2.9-7.5Z"/><path fill="#34A853" d="M12 22c2.7 0 5-.9 6.7-2.3l-3.3-2.6c-.9.6-2.1 1-3.4 1-2.6 0-4.9-1.8-5.7-4.2H2.9v2.7A10 10 0 0 0 12 22Z"/><path fill="#FBBC05" d="M6.3 13.9A6 6 0 0 1 6 12c0-.7.1-1.3.3-1.9V7.4H2.9A10 10 0 0 0 2 12c0 1.6.4 3.2 1 4.6l3.3-2.7Z"/><path fill="#EA4335" d="M12 5.9c1.5 0 2.8.5 3.8 1.5l2.9-2.8A9.7 9.7 0 0 0 12 2a10 10 0 0 0-9.1 5.4l3.4 2.7C7.1 7.7 9.4 5.9 12 5.9Z"/></svg>
+                                </span>
+                                <span data-provider-copy="Google">Continuar con Google</span>
+                                <span class="social-arrow" aria-hidden="true">›</span>
+                            </button>
+                            <button class="social-button" type="button" data-provider="Facebook">
+                                <span class="social-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12a12 12 0 1 0-13.9 11.9v-8.4h-3V12h3V9.3c0-3 1.8-4.7 4.6-4.7 1.3 0 2.7.2 2.7.2v3h-1.5c-1.5 0-2 .9-2 1.9V12h3.3l-.5 3.5h-2.8v8.4A12 12 0 0 0 24 12Z"/></svg>
+                                </span>
+                                <span data-provider-copy="Facebook">Continuar con Facebook</span>
+                                <span class="social-arrow" aria-hidden="true">›</span>
+                            </button>
+                            <button class="social-button" type="button" data-provider="TikTok">
+                                <span class="social-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="#111"><path d="M16.8 3c.3 1.8 1.4 3.3 3.2 4.1v3.1a9 9 0 0 1-3.2-.8v6.3a6.2 6.2 0 1 1-5.3-6.1v3.2a3.1 3.1 0 1 0 2.1 2.9V3h3.2Z"/><path fill="#25F4EE" d="M10.6 10v2.9a3.2 3.2 0 0 0-2.5 3.1 3.1 3.1 0 0 0 1.2 2.5A3.1 3.1 0 0 1 6.5 15a6.2 6.2 0 0 1 4.1-5Z"/><path fill="#FE2C55" d="M17.4 3c.3 1.5 1.2 2.7 2.6 3.5v.6A6.4 6.4 0 0 1 16.8 3h.6ZM16.8 9.4v6.3a6.2 6.2 0 0 1-9.9 5 6.2 6.2 0 0 0 10.5-4.5V9.7c1 .4 2.1.6 3.2.6v.5a9 9 0 0 1-3.8-1.4Z"/></svg>
+                                </span>
+                                <span data-provider-copy="TikTok">Continuar con TikTok</span>
+                                <span class="social-arrow" aria-hidden="true">›</span>
+                            </button>
+                        </div>
+
+                        <div class="divider"><span>o</span></div>
+                        <button class="password-link" id="password-link" type="button">Ingresar con mi contraseña actual</button>
+                    </div>
+                </form>
+
+                <p class="terms">Al continuar aceptas los <a href="#">Términos de uso</a> y la <a href="#">Política de privacidad</a> de Huancayoga.</p>
+            </div>
+        </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">
+        <span class="toast-icon">✓</span>
+        <div><strong id="toast-title">Verificación completada</strong><p id="toast-copy">Ya puedes elegir una cuenta para continuar.</p></div>
+    </div>
+
+    <div class="modal-backdrop" id="provider-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal">
+            <div class="modal-provider" id="modal-provider-icon">G</div>
+            <h3 id="modal-title">Continuar con Google</h3>
+            <p id="modal-copy">En la versión final, ahora te enviaremos de forma segura a Google para confirmar tu identidad.</p>
+            <div class="modal-summary" id="modal-summary">✓ DNI confirmado &nbsp;·&nbsp; ✓ Turnstile superado<br>Tu DNI no será enviado al proveedor social.</div>
+            <div class="modal-actions">
+                <button class="modal-cancel" id="modal-cancel" type="button">Volver</button>
+                <button class="modal-continue" id="modal-continue" type="button">Ver simulación</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const state = { mode: "login", dniValid: false, verified: false, provider: "" };
+        const tabs = document.querySelectorAll(".tab");
+        const dni = document.getElementById("dni");
+        const dniWrap = document.getElementById("dni-wrap");
+        const dniHelp = document.getElementById("dni-help");
+        const form = document.getElementById("access-form");
+        const dniButton = document.getElementById("dni-button");
+        const verificationArea = document.getElementById("verification-area");
+        const turnstileWidget = document.getElementById("turnstile-widget");
+        const turnstileCheck = document.getElementById("turnstile-check");
+        const turnstileText = document.getElementById("turnstile-text");
+        const socialArea = document.getElementById("social-area");
+        const toast = document.getElementById("toast");
+        const modal = document.getElementById("provider-modal");
+        let toastTimer;
+
+        function updateSteps(active) {
+            const steps = [document.getElementById("step-dni"), document.getElementById("step-security"), document.getElementById("step-social")];
+            steps.forEach((step, index) => {
+                step.classList.toggle("active", index === active);
+                step.classList.toggle("done", index < active);
+            });
+        }
+
+        function resetFlow() {
+            state.dniValid = false;
+            state.verified = false;
+            dni.value = "";
+            dniWrap.classList.remove("valid");
+            dniHelp.textContent = "Obligatorio antes de usar cualquier cuenta social.";
+            dniHelp.classList.remove("error");
+            dniButton.hidden = false;
+            verificationArea.classList.remove("visible");
+            verificationArea.setAttribute("aria-hidden", "true");
+            turnstileWidget.classList.remove("verified");
+            turnstileText.textContent = "Verificar que soy una persona";
+            socialArea.classList.remove("visible");
+            socialArea.setAttribute("aria-hidden", "true");
+            updateSteps(0);
+        }
+
+        function setMode(mode) {
+            state.mode = mode;
+            tabs.forEach(tab => {
+                const active = tab.dataset.mode === mode;
+                tab.classList.toggle("active", active);
+                tab.setAttribute("aria-selected", String(active));
+            });
+            document.getElementById("form-title").textContent = mode === "login" ? "Qué bueno verte" : "Crea tu cuenta";
+            document.getElementById("form-copy").textContent = mode === "login"
+                ? "Primero ingresa tu DNI. Después podrás elegir tu forma de acceso."
+                : "Tu registro comenzará validando el DNI antes de conectarlo a una cuenta social.";
+            document.getElementById("social-caption").textContent = mode === "login"
+                ? "DNI verificado. Ahora elige cómo ingresar."
+                : "DNI verificado. Elige la cuenta que deseas vincular.";
+            document.querySelectorAll("[data-provider-copy]").forEach(copy => {
+                copy.textContent = `${mode === "login" ? "Continuar" : "Registrarme"} con ${copy.dataset.providerCopy}`;
+            });
+            document.getElementById("password-link").hidden = mode === "register";
+            resetFlow();
+            dni.focus();
+        }
+
+        tabs.forEach(tab => tab.addEventListener("click", () => setMode(tab.dataset.mode)));
+
+        dni.addEventListener("input", () => {
+            dni.value = dni.value.replace(/\D/g, "").slice(0, 8);
+            dniHelp.classList.remove("error");
+            if (!state.dniValid) dniHelp.textContent = "Obligatorio antes de usar cualquier cuenta social.";
+        });
+
+        form.addEventListener("submit", event => {
+            event.preventDefault();
+            if (!/^\d{8}$/.test(dni.value)) {
+                dniHelp.textContent = "Ingresa un DNI válido de exactamente 8 dígitos.";
+                dniHelp.classList.add("error");
+                dni.focus();
+                return;
+            }
+            state.dniValid = true;
+            dniWrap.classList.add("valid");
+            dniHelp.textContent = state.mode === "login" ? "DNI identificado. Completa la verificación de seguridad." : "DNI listo para validarse. Completa la verificación de seguridad.";
+            dniButton.hidden = true;
+            verificationArea.classList.add("visible");
+            verificationArea.setAttribute("aria-hidden", "false");
+            updateSteps(1);
+            window.setTimeout(() => turnstileCheck.focus(), 280);
+        });
+
+        turnstileCheck.addEventListener("click", () => {
+            if (!state.dniValid || state.verified) return;
+            turnstileText.textContent = "Verificando...";
+            turnstileCheck.disabled = true;
+            window.setTimeout(() => {
+                state.verified = true;
+                turnstileWidget.classList.add("verified");
+                turnstileText.textContent = "Verificación completada";
+                turnstileCheck.disabled = false;
+                socialArea.classList.add("visible");
+                socialArea.setAttribute("aria-hidden", "false");
+                updateSteps(2);
+                showToast("Verificación completada", "Ya puedes elegir una cuenta para continuar.");
+            }, 780);
+        });
+
+        function showToast(title, copy) {
+            document.getElementById("toast-title").textContent = title;
+            document.getElementById("toast-copy").textContent = copy;
+            toast.classList.add("show");
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.remove("show"), 3400);
+        }
+
+        document.querySelectorAll(".social-button").forEach(button => {
+            button.addEventListener("click", () => {
+                if (!state.verified) return;
+                state.provider = button.dataset.provider;
+                const provider = state.provider;
+                const initial = provider === "TikTok" ? "♪" : provider.charAt(0);
+                document.getElementById("modal-provider-icon").textContent = initial;
+                document.getElementById("modal-title").textContent = `${state.mode === "login" ? "Continuar" : "Registrarte"} con ${provider}`;
+                document.getElementById("modal-copy").textContent = `En la versión final, ahora te enviaremos de forma segura a ${provider} para confirmar tu identidad.`;
+                document.getElementById("modal-continue").textContent = `Simular ${provider}`;
+                modal.classList.add("open");
+            });
+        });
+
+        function closeModal() { modal.classList.remove("open"); }
+        document.getElementById("modal-cancel").addEventListener("click", closeModal);
+        modal.addEventListener("click", event => { if (event.target === modal) closeModal(); });
+        document.addEventListener("keydown", event => { if (event.key === "Escape") closeModal(); });
+
+        document.getElementById("modal-continue").addEventListener("click", () => {
+            closeModal();
+            if (state.provider === "TikTok") {
+                window.location.href = "/static/prototipos/tiktok_confirmacion_datos.html";
+                return;
+            }
+            showToast("Flujo de demostración finalizado", `${state.provider} regresaría a Huancayoga con la identidad confirmada.`);
+        });
+
+        document.getElementById("password-link").addEventListener("click", () => {
+            showToast("Acceso tradicional", "En la implementación se abriría el campo de contraseña sin volver a pedir el DNI.");
+        });
+    </script>
+</body>
+</html>
