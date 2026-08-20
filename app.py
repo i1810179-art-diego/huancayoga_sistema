@@ -876,8 +876,18 @@ def check_db():
 # ==========================
 
 MAX_ASISTENTES_RESERVA = 40
-INTERVALO_AGENDA_MINUTOS = 5
+INTERVALO_AGENDA_MINUTOS = 15
+HORA_INICIO_AGENDA = 7
+HORA_FIN_AGENDA = 20
 DURACIONES_PROGRAMA = (45, 60, 90, 120)
+HORAS_RESERVA = tuple(
+    (datetime(2000, 1, 1, HORA_INICIO_AGENDA) + timedelta(minutes=minutos)).strftime("%H:%M")
+    for minutos in range(
+        0,
+        (HORA_FIN_AGENDA - HORA_INICIO_AGENDA) * 60 + 1,
+        INTERVALO_AGENDA_MINUTOS,
+    )
+)
 CATEGORIAS_PROGRAMA = {
     "colegio": "Colegio",
     "instituto": "Instituto",
@@ -926,6 +936,18 @@ def texto_reserva(formulario, campo, maximo, obligatorio=False):
         raise ValueError(f"El campo {campo.replace('_', ' ')} es demasiado largo.")
 
     return valor
+
+
+def hora_reserva(valor):
+    valor = (valor or "").strip()
+
+    for formato in ("%H:%M", "%H:%M:%S", "%H:%M:%S.%f"):
+        try:
+            return datetime.strptime(valor, formato).time()
+        except ValueError:
+            continue
+
+    raise ValueError("Hora de reserva no válida.")
 
 
 def google_calendar_configurado():
@@ -1413,21 +1435,29 @@ def reservar():
 
         try:
             servicio_id = int(request.form.get(f"{prefijo}servicio_id", ""))
+        except (TypeError, ValueError):
+            servicio_id = None
+            errores.append("Selecciona un servicio válido.")
+
+        try:
             cantidad_personas = int(request.form.get(f"{prefijo}cantidad_personas", "1"))
+        except (TypeError, ValueError):
+            cantidad_personas = 0
+
+        try:
             fecha = datetime.strptime(
                 request.form.get(f"{prefijo}fecha", ""),
                 "%Y-%m-%d",
             ).date()
-            hora = datetime.strptime(
-                request.form.get(f"{prefijo}hora", ""),
-                "%H:%M",
-            ).time()
         except (TypeError, ValueError):
-            errores.append("Revisa el servicio, la cantidad de asistentes, la fecha y la hora.")
-            servicio_id = None
-            cantidad_personas = 0
             fecha = None
+            errores.append("Selecciona una fecha válida.")
+
+        try:
+            hora = hora_reserva(request.form.get(f"{prefijo}hora", ""))
+        except (TypeError, ValueError):
             hora = None
+            errores.append("Selecciona una hora válida.")
 
         if not 1 <= cantidad_personas <= MAX_ASISTENTES_RESERVA:
             errores.append("La reserva debe incluir entre 1 y 40 asistentes en total.")
@@ -1457,8 +1487,11 @@ def reservar():
         if fecha and fecha < fecha_minima:
             errores.append("No puedes reservar una fecha que ya pasó.")
 
-        if hora and (hora.minute % INTERVALO_AGENDA_MINUTOS != 0 or hora.second != 0):
-            errores.append("La hora debe seleccionarse en intervalos de 5 minutos.")
+        if hora and hora.strftime("%H:%M") not in HORAS_RESERVA:
+            errores.append(
+                "Selecciona un horario disponible entre las 07:00 y las 20:00, "
+                "en intervalos de 15 minutos."
+            )
 
         if fecha and hora and duracion_minutos:
             inicio = datetime.combine(fecha, hora)
@@ -1530,6 +1563,7 @@ def reservar():
                 cliente=cliente,
                 categorias_programa=CATEGORIAS_PROGRAMA,
                 duraciones_programa=DURACIONES_PROGRAMA,
+                horas_reserva=HORAS_RESERVA,
                 form_data=request.form,
             ), 400
 
@@ -1639,6 +1673,7 @@ def reservar():
         cliente=cliente,
         categorias_programa=CATEGORIAS_PROGRAMA,
         duraciones_programa=DURACIONES_PROGRAMA,
+        horas_reserva=HORAS_RESERVA,
         form_data={},
     )
 

@@ -108,7 +108,12 @@
                             </label>
                             <label class="reservation-field">
                                 <span>Hora de inicio</span>
-                                <input type="time" name="hora" step="300" value="{{ form_data.get('hora', '') }}" required>
+                                <select name="hora" required>
+                                    <option value="">Selecciona una hora</option>
+                                    {% for hora_reserva in horas_reserva %}
+                                        <option value="{{ hora_reserva }}"{% if form_data.get('hora', '')[:5] == hora_reserva %} selected{% endif %}>{{ hora_reserva }}</option>
+                                    {% endfor %}
+                                </select>
                             </label>
                         </div>
 
@@ -196,7 +201,12 @@
                             </label>
                             <label class="reservation-field">
                                 <span>Hora de inicio</span>
-                                <input type="time" name="institucion_hora" step="300" value="{{ form_data.get('institucion_hora', '') }}" required>
+                                <select name="institucion_hora" required>
+                                    <option value="">Selecciona una hora</option>
+                                    {% for hora_reserva in horas_reserva %}
+                                        <option value="{{ hora_reserva }}"{% if form_data.get('institucion_hora', '')[:5] == hora_reserva %} selected{% endif %}>{{ hora_reserva }}</option>
+                                    {% endfor %}
+                                </select>
                             </label>
                         </div>
 
