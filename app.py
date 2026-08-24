@@ -319,8 +319,9 @@ def contexto_seguridad_acceso():
 @app.before_request
 def proteger_post_con_csrf():
     rutas_excluidas = {"api_chatbot", "api_ruta_huancayoga"}
+    es_api_rest = request.blueprint == "api_v1"
 
-    if request.method == "POST" and request.endpoint not in rutas_excluidas:
+    if request.method == "POST" and request.endpoint not in rutas_excluidas and not es_api_rest:
         if not csrf_valido():
             flash("La solicitud no pudo validarse. Intenta nuevamente.", "danger")
             return redirect(request.referrer or url_for("index"))

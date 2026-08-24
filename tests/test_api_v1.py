@@ -1,8 +1,9 @@
 import unittest
+from unittest.mock import Mock
 
 from flask import Flask
 
-from api_v1 import api, validar_producto, validar_publicacion
+from api_v1 import register_api, validar_producto, validar_publicacion
 
 
 class ApiValidationTests(unittest.TestCase):
@@ -33,8 +34,7 @@ class ApiValidationTests(unittest.TestCase):
     def test_endpoint_protegido_exige_bearer_token(self):
         app = Flask(__name__)
         app.secret_key = "test-secret"
-        app.config["API_TOKEN_TTL_SECONDS"] = 3600
-        app.register_blueprint(api)
+        register_api(app, Mock(), Mock())
         response = app.test_client().get("/api/v1/productos")
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.get_json()["error"]["code"], "TOKEN_REQUERIDO")
