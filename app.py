@@ -32,6 +32,7 @@ app.config["SESSION_COOKIE_SECURE"] = (
     or bool(os.getenv("RENDER"))
 )
 app.config["APP_DEBUG"] = os.getenv("FLASK_DEBUG", "False").lower() == "true"
+app.config["API_TOKEN_TTL_SECONDS"] = int(os.getenv("API_TOKEN_TTL_SECONDS", 3600))
 
 # Configuración de MySQL
 app.config["MYSQL_HOST"] = os.getenv("DB_HOST")
@@ -100,6 +101,9 @@ app.config["TIKTOK_CLIENT_SECRET"] = os.getenv("TIKTOK_CLIENT_SECRET")
 mail = Mail(app)
 
 mysql = MySQL(app)
+
+# API REST v1 (separada de las vistas HTML para conservar ambas interfaces).
+from api_v1 import register_api
 
 ultima_alerta_sistema = {}
 cache_rutas_huancayoga = {}
@@ -372,6 +376,10 @@ def password_admin_valido(password_guardado, password_ingresado):
         return check_password_hash(password_guardado, password_ingresado)
 
     return secrets.compare_digest(password_guardado, password_ingresado)
+
+
+# Las rutas /api/v1 reutilizan la conexión y la validación de administradores.
+register_api(app, mysql, password_admin_valido)
 
 
 # funciones

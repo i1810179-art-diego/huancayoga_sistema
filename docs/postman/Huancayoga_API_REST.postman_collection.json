@@ -1,0 +1,72 @@
+{
+  "info": {
+    "name": "Huancayoga API REST v1",
+    "description": "Demostración académica de autenticación y CRUD REST de productos y publicaciones.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "baseUrl", "value": "http://127.0.0.1:5000"},
+    {"key": "adminUsuario", "value": "admin"},
+    {"key": "adminPassword", "value": ""},
+    {"key": "accessToken", "value": ""},
+    {"key": "productoId", "value": ""},
+    {"key": "publicacionId", "value": ""}
+  ],
+  "item": [
+    {
+      "name": "00 - Autenticación",
+      "item": [{
+        "name": "Login de administrador",
+        "request": {
+          "method": "POST",
+          "header": [{"key": "Content-Type", "value": "application/json"}],
+          "body": {"mode": "raw", "raw": "{\n  \"usuario\": \"{{adminUsuario}}\",\n  \"password\": \"{{adminPassword}}\"\n}"},
+          "url": "{{baseUrl}}/api/v1/auth/login"
+        },
+        "event": [{"listen": "test", "script": {"exec": [
+          "pm.test('Login HTTP 200', () => pm.response.to.have.status(200));",
+          "const json = pm.response.json();",
+          "if (json.success) pm.collectionVariables.set('accessToken', json.data.access_token);"
+        ]}}]
+      }]
+    },
+    {
+      "name": "01 - Productos CRUD",
+      "item": [
+        {
+          "name": "Crear producto",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "body": {"mode": "raw", "raw": "{\n  \"nombre\": \"Mat API Postman\",\n  \"descripcion\": \"Producto creado durante la demostración\",\n  \"precio\": 89.90,\n  \"stock\": 10,\n  \"imagen\": null\n}"},
+            "url": "{{baseUrl}}/api/v1/productos"
+          },
+          "event": [{"listen": "test", "script": {"exec": ["pm.test('Creado HTTP 201', () => pm.response.to.have.status(201));", "const json = pm.response.json();", "if (json.success) pm.collectionVariables.set('productoId', json.data.id);"]}}]
+        },
+        {"name": "Listar productos", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}], "url": "{{baseUrl}}/api/v1/productos?page=1&per_page=20"}},
+        {"name": "Obtener producto", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}], "url": "{{baseUrl}}/api/v1/productos/{{productoId}}"}},
+        {"name": "Actualizar producto", "request": {"method": "PATCH", "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}], "body": {"mode": "raw", "raw": "{\n  \"precio\": 95.50,\n  \"stock\": 8\n}"}, "url": "{{baseUrl}}/api/v1/productos/{{productoId}}"}},
+        {"name": "Eliminar producto (lógico)", "request": {"method": "DELETE", "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}], "url": "{{baseUrl}}/api/v1/productos/{{productoId}}"}}
+      ]
+    },
+    {
+      "name": "02 - Publicaciones CRUD",
+      "item": [
+        {
+          "name": "Crear publicación",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "body": {"mode": "raw", "raw": "{\n  \"titulo\": \"Publicación API Postman\",\n  \"contenido\": \"Contenido creado durante la demostración REST.\",\n  \"tipo\": \"noticia\",\n  \"imagen\": null\n}"},
+            "url": "{{baseUrl}}/api/v1/publicaciones"
+          },
+          "event": [{"listen": "test", "script": {"exec": ["pm.test('Creada HTTP 201', () => pm.response.to.have.status(201));", "const json = pm.response.json();", "if (json.success) pm.collectionVariables.set('publicacionId', json.data.id);"]}}]
+        },
+        {"name": "Listar publicaciones", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}], "url": "{{baseUrl}}/api/v1/publicaciones?page=1&per_page=20"}},
+        {"name": "Obtener publicación", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}], "url": "{{baseUrl}}/api/v1/publicaciones/{{publicacionId}}"}},
+        {"name": "Actualizar publicación", "request": {"method": "PATCH", "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}], "body": {"mode": "raw", "raw": "{\n  \"titulo\": \"Publicación actualizada desde Postman\"\n}"}, "url": "{{baseUrl}}/api/v1/publicaciones/{{publicacionId}}"}},
+        {"name": "Eliminar publicación (lógico)", "request": {"method": "DELETE", "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}], "url": "{{baseUrl}}/api/v1/publicaciones/{{publicacionId}}"}}
+      ]
+    }
+  ]
+}
