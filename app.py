@@ -7,6 +7,7 @@ from flask_mail import Mail, Message
 from werkzeug.utils import secure_filename
 from MySQLdb import IntegrityError
 from MySQLdb.cursors import DictCursor
+from itsdangerous import URLSafeSerializer, BadSignature
 import os
 import requests
 import secrets
@@ -1785,22 +1786,54 @@ def comprar(id):
         flash("Para comprar un producto primero debes registrarte o iniciar sesión.", "warning")
         return redirect(url_for("cliente_login"))
 
-    cur = mysql.connection.cursor()
+    cliente_id = session["cliente_id"]
+    serializer = URLSafeSerializer(app.secret_key, salt="confirmar-pedido")
+    if request.method == "POST":
+        try:
+            intento = serializer.loads(request.form.get("pedido_token", ""))
+            if intento["cliente_id"] != cliente_id or intento["producto_id"] != id:
+                raise BadSignature("Pedido incorrecto")
+        except (BadSignature, KeyError, TypeError):
+            flash("Actualiza la página para confirmar tu pedido.", "warning")
+            return redirect(url_for("comprar", id=id))
+
+    connection = mysql.connection
+    cur = connection.cursor()
+    try:
+        return procesar_compra(id, cliente_id, serializer, connection, cur,
+                               intento if request.method == "POST" else None)
+    finally:
+        # Also releases the product row lock on validation failures or exceptions.
+        connection.rollback()
+        cur.close()
+
+
+def procesar_compra(id, cliente_id, serializer, connection, cur, intento):
 
     cur.execute("""
         SELECT id, nombre, descripcion, precio, stock, imagen
         FROM productos
         WHERE id = %s AND estado = 'activo'
-    """, (id,))
+    """ + (" FOR UPDATE" if request.method == "POST" else ""), (id,))
 
     producto = cur.fetchone()
 
     if producto is None:
-        cur.close()
         flash("El producto no existe o no está disponible.", "danger")
         return redirect(url_for("productos"))
 
     if request.method == "POST":
+        # Locking reads see committed orders even when another worker handled
+        # the first click. The signed baseline survives retries and lost replies.
+        cur.execute("""
+            SELECT id FROM pedidos
+            WHERE cliente_id = %s AND producto_id = %s AND id > %s
+            ORDER BY id DESC LIMIT 1 FOR UPDATE
+        """, (cliente_id, id, intento["ultimo_pedido"]))
+        if cur.fetchone():
+            flash("Este pedido ya fue registrado. Puedes revisarlo en Mis pedidos.", "info")
+            return redirect(url_for("cliente_mis_pedidos"))
+
         nombre_cliente = request.form["nombre_cliente"]
         celular = request.form["celular"]
         cantidad = int(request.form["cantidad"])
@@ -1811,12 +1844,10 @@ def comprar(id):
 
         if cantidad <= 0:
             flash("La cantidad debe ser mayor a 0.", "danger")
-            cur.close()
             return redirect(url_for("comprar", id=id))
 
         if cantidad > stock:
             flash("No hay suficiente stock disponible.", "danger")
-            cur.close()
             return redirect(url_for("comprar", id=id))
 
         total = precio * cantidad
@@ -1854,8 +1885,7 @@ def comprar(id):
             id
         ))
 
-        mysql.connection.commit()
-        cur.close()
+        connection.commit()
 
         enviar_correo(
         correo,
@@ -1866,8 +1896,11 @@ def comprar(id):
         flash("Pedido registrado correctamente. Ahora puedes coordinar el pago por WhatsApp.", "success")
         return redirect(url_for("comprar", id=id))
 
-    cur.close()
-    return render_template("comprar.html", producto=producto)
+    cur.execute("SELECT COALESCE(MAX(id), 0) FROM pedidos WHERE cliente_id = %s AND producto_id = %s",
+                (cliente_id, id))
+    pedido_token = serializer.dumps({"cliente_id": cliente_id, "producto_id": id,
+                                     "ultimo_pedido": cur.fetchone()[0]})
+    return render_template("comprar.html", producto=producto, pedido_token=pedido_token)
 
 @app.route("/admin/productos/nuevo", methods=["GET", "POST"])
 def admin_nuevo_producto():
