@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Un respiro en el camino | Huancayoga</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/estilos.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/404.css') }}">
+</head>
+<body class="nature-error">
+    <header class="nature-header"><a href="{{ url_for('index') }}">✳ Huancayoga</a><span>Movimiento · Naturaleza · Bienestar</span></header>
+    <main class="nature-main">
+        <span class="nature-eyebrow">UN RESPIRO EN EL CAMINO</span>
+        <div class="nature-scene">
+            <svg viewBox="0 0 760 360" role="img" aria-labelledby="nature-title nature-desc">
+                <title id="nature-title">404 en un jardín de calma</title>
+                <desc id="nature-desc">Un conejo y un zorro descansan entre hojas, flores y grandes números verdes, bajo un sol dorado.</desc>
+                <defs>
+                    <g id="leaf"><path d="M0 0 Q-55-65 0-110 Q55-65 0 0" fill="currentColor"/><path d="M0-5V-90" stroke="#fffdf8" stroke-opacity=".45" stroke-width="2"/></g>
+                    <g id="sprig" fill="none" stroke="currentColor" stroke-width="3"><path d="M0 0Q-10-65 12-125"/><path d="M0-25Q-40-25-35-55Q-5-55 0-25M0-55Q32-50 35-80Q8-85 0-55M5-85Q-22-85-20-110Q0-110 5-85" fill="currentColor"/></g>
+                </defs>
+                <ellipse cx="380" cy="315" rx="310" ry="25" fill="#e4eee8"/>
+                <circle cx="570" cy="79" r="47" fill="#d6a84b" opacity=".28"/>
+                <path d="M178 120Q380-35 583 148" fill="none" stroke="#ded5c7" stroke-dasharray="3 10"/>
+                <text x="380" y="280" text-anchor="middle" font-family="Georgia,serif" font-size="252" font-weight="bold" letter-spacing="5" fill="#244b3b">404</text>
+                <g color="#56856f"><use href="#sprig" transform="translate(123 310) rotate(-20)"/><use href="#sprig" transform="translate(642 313) rotate(22) scale(1.15)"/></g>
+                <g color="#91aa89"><use href="#leaf" transform="translate(170 316) rotate(-43) scale(.7)"/><use href="#leaf" transform="translate(595 316) rotate(38) scale(.85)"/><use href="#leaf" transform="translate(211 302) rotate(20) scale(.45)"/></g>
+                <g stroke="#244b3b" stroke-width="2.5" stroke-linecap="round">
+                    <path d="M273 309Q238 308 245 283Q249 263 270 269Q269 240 280 239Q293 241 284 274Q303 253 311 264Q316 276 298 286Q321 314 285 316" fill="#eee4d5"/>
+                    <path d="M261 291q4 5 8 0m11 0q4 5 8 0m-13 8h2" fill="none"/>
+                    <path d="M471 308Q511 272 544 298Q573 324 519 324H471" fill="#c96f4a" stroke="none"/>
+                    <path d="M489 290L480 259L505 274L529 261L531 294Q510 324 489 290" fill="#c96f4a" stroke="none"/>
+                    <path d="M489 287L506 298L529 287Q516 316 506 309Q495 308 489 287" fill="#fffdf8" stroke="none"/>
+                    <path d="M496 285l5 2m16-2l-5 2m-8 10h3" fill="none"/>
+                    <path d="M542 299Q565 306 549 320L533 320" fill="#eee4d5" stroke="none"/>
+                </g>
+                <g fill="#ecc7b7"><circle cx="147" cy="204" r="8"/><circle cx="138" cy="211" r="8"/><circle cx="151" cy="216" r="8"/></g><circle cx="146" cy="211" r="4" fill="#d6a84b"/>
+                <g fill="#d6a84b"><circle cx="612" cy="184" r="4"/><circle cx="198" cy="108" r="3"/><path d="M338 73q-17-22-22-7q1 13 22 7q14-24 20-11q4 12-20 11"/></g>
+                <path d="M376 305q-24-26-29-7q7 15 29 7q24-26 29-7q-7 15-29 7" fill="#91aa89"/>
+            </svg>
+        </div>
+        <h1>¡Oops! Parece que te perdiste.</h1>
+        <p>No encontramos la página que estás buscando. Respira profundamente, encuentra tu equilibrio y regresa al inicio de Huancayoga.</p>
+        <a class="nature-home" href="{{ url_for('index') }}">Volver al inicio <span aria-hidden="true">→</span></a>
+        <span class="nature-note">A veces, una pausa también es parte del camino.</span>
+    </main>
+    <footer class="nature-footer">Huancayoga · Un espacio para volver a ti</footer>
+</body>
+</html>

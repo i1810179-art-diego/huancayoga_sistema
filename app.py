@@ -327,6 +327,13 @@ def proteger_post_con_csrf():
             return redirect(request.referrer or url_for("index"))
 
 
+@app.errorhandler(404)
+def pagina_no_encontrada(error):
+    if request.path.startswith("/api/"):
+        return {"success": False, "error": {"code": "NO_ENCONTRADO", "message": "Recurso no encontrado."}}, 404
+    return render_template("public/404.html"), 404
+
+
 @app.errorhandler(413)
 def archivo_demasiado_grande(error):
     flash(

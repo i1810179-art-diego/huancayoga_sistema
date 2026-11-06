@@ -2796,3 +2796,18 @@ body > section.container > h1::after, body > section.container > h2::after, body
     .registration-form-wide { grid-column: auto; }
     .registration-dni-group { grid-template-columns: 1fr; }
 }
+
+/* Institutional reservation wizard: scoped to the existing reservation form. */
+.reservation-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:26px 0 12px}
+.reservation-steps>span{display:flex;align-items:center;gap:8px;padding:12px 10px;border-radius:12px;background:var(--hy-background);color:var(--hy-text-muted);font-size:12px;font-weight:800;border:1px solid var(--hy-border)}
+.reservation-steps b{display:grid;place-items:center;flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--hy-surface)}
+.reservation-steps .is-current{background:var(--hy-primary);color:var(--hy-surface);border-color:var(--hy-primary)}
+.reservation-steps .is-current b{background:rgba(255,255,255,.16)}.reservation-steps .is-complete{background:var(--hy-primary-soft);color:var(--hy-primary)}
+.reservation-step-status{font-size:12px;color:var(--hy-text-muted);margin:0 0 18px}
+.reservation-wizard-actions{display:flex;justify-content:space-between;gap:12px;margin-top:24px}.reservation-wizard-actions [data-wizard-next]{margin-left:auto}
+.wizard-back{border:1px solid var(--hy-border);border-radius:10px;padding:12px 20px;background:var(--hy-surface);color:var(--hy-primary);font-weight:700}
+#reservation-form [hidden]{display:none!important}
+[data-wizard-step]:not([hidden]){animation:reservation-step-in .2s ease-out}
+@keyframes reservation-step-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){[data-wizard-step]:not([hidden]){animation:none}}
+@media(max-width:600px){.reservation-steps{gap:5px}.reservation-steps>span{flex-direction:column;text-align:center;font-size:10px;padding:10px 5px}.reservation-wizard-actions button{padding:12px 16px}}

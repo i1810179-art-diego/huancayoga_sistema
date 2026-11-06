@@ -138,6 +138,13 @@
                             <div><h2>Programa para grupos e instituciones</h2><p>Cuéntanos quiénes participarán y cómo adaptar la sesión.</p></div>
                         </header>
 
+                        <nav class="reservation-steps" aria-label="Progreso de la solicitud">
+                            <span data-step-indicator="0"><b>1</b> Información del grupo</span>
+                            <span data-step-indicator="1"><b>2</b> Servicio y horario</span>
+                            <span data-step-indicator="2"><b>3</b> Lugar y detalles</span>
+                        </nav>
+                        <p class="reservation-step-status" aria-live="polite" data-step-status></p>
+                        <section data-wizard-step="0" aria-label="Información del grupo">
                         <h3 class="reservation-subheading">Grupo y responsable</h3>
                         <div class="reservation-form-grid">
                             <label class="reservation-field">
@@ -176,6 +183,8 @@
                             </label>
                         </div>
 
+                        </section>
+                        <section data-wizard-step="1" aria-label="Servicio y horario">
                         <h3 class="reservation-subheading">Servicio y horario</h3>
                         <div class="reservation-form-grid">
                             <label class="reservation-field">
@@ -210,6 +219,8 @@
                             </label>
                         </div>
 
+                        </section>
+                        <section data-wizard-step="2" aria-label="Lugar e información adicional">
                         <h3 class="reservation-subheading">Lugar y adaptaciones</h3>
                         <div class="reservation-location-options">
                             <label class="reservation-location-card">
@@ -236,6 +247,11 @@
                                 <span>Observaciones <small>Opcional</small></span>
                                 <textarea name="institucion_comentario" maxlength="2000" rows="3" placeholder="Objetivo de la actividad, características del espacio u otra información importante.">{{ form_data.get('institucion_comentario', '') }}</textarea>
                             </label>
+                        </div>
+                        </section>
+                        <div class="reservation-wizard-actions" data-wizard-actions hidden>
+                            <button type="button" class="wizard-back" data-wizard-back>← Anterior</button>
+                            <button type="button" class="reservation-submit" data-wizard-next>Siguiente →</button>
                         </div>
                     </fieldset>
 
@@ -273,6 +289,78 @@
             const externalInput = externalAddress.querySelector('input');
             const locationInputs = [...document.querySelectorAll('input[name="tipo_lugar"]')];
 
+            const form = document.getElementById('reservation-form');
+            const steps = [...document.querySelectorAll('[data-wizard-step]')];
+            const indicators = [...document.querySelectorAll('[data-step-indicator]')];
+            const back = document.querySelector('[data-wizard-back]');
+            const next = document.querySelector('[data-wizard-next]');
+            const actions = document.querySelector('[data-wizard-actions]');
+            const submit = form.querySelector('button[type="submit"]');
+            let step = 0;
+            let submitting = false;
+            function showStep(index, focus = false) {
+                step = index;
+                const institutional = modeInput.value === 'institucional';
+                steps.forEach((panel, i) => panel.hidden = institutional && i !== step);
+                indicators.forEach((item, i) => {
+                    item.classList.toggle('is-current', i === step);
+                    item.classList.toggle('is-complete', i < step);
+                    if (i === step) item.setAttribute('aria-current', 'step');
+                    else item.removeAttribute('aria-current');
+                });
+                actions.hidden = !institutional;
+                back.hidden = step === 0;
+                next.hidden = step === 2;
+                submit.hidden = institutional && step !== 2;
+                document.querySelector('[data-step-status]').textContent = `Paso ${step + 1} de 3`;
+                if (focus) {
+                    const heading = steps[step].querySelector('h3');
+                    heading.tabIndex = -1;
+                    heading.focus();
+                }
+            }
+            function validateStep(index) {
+                const invalid = [...steps[index].querySelectorAll('input, select, textarea')]
+                    .find(input => !input.checkValidity());
+                if (!invalid) return true;
+                showStep(index);
+                invalid.reportValidity();
+                return false;
+            }
+            next.addEventListener('click', () => {
+                if (validateStep(step)) showStep(Math.min(2, step + 1), true);
+            });
+            back.addEventListener('click', () => showStep(Math.max(0, step - 1), true));
+            // Reveal invalid fields before the browser attempts to focus them.
+            form.addEventListener('invalid', event => {
+                const panel = event.target.closest('[data-wizard-step]');
+                if (panel && panel.hidden) showStep(Number(panel.dataset.wizardStep));
+            }, true);
+            form.addEventListener('keydown', event => {
+                if (modeInput.value === 'institucional' && step < 2 && event.key === 'Enter'
+                    && event.target.matches('input')) {
+                    event.preventDefault();
+                    next.click();
+                }
+            });
+            form.addEventListener('submit', event => {
+                if (submitting) { event.preventDefault(); return; }
+                if (modeInput.value === 'institucional') {
+                    for (let i = 0; i < steps.length; i++) {
+                        if (!validateStep(i)) { event.preventDefault(); return; }
+                    }
+                    if (step !== 2) { event.preventDefault(); showStep(step + 1, true); return; }
+                }
+                submitting = true;
+                submit.disabled = true;
+                submitLabel.textContent = 'Enviando solicitud…';
+            });
+            window.addEventListener('pageshow', () => {
+                submitting = false;
+                submit.disabled = false;
+                submitLabel.textContent = modeInput.value === 'institucional' ? 'Enviar solicitud privada' : 'Solicitar reserva';
+            });
+
             function activeCountInput() {
                 return modeInput.value === 'institucional'
                     ? document.getElementById('institucion-cantidad-personas')
@@ -291,7 +379,7 @@
                 const isExternal = selected && selected.value === 'externo';
                 externalAddress.hidden = !isExternal;
                 externalInput.required = Boolean(isExternal);
-                if (!isExternal) externalInput.value = '';
+                // Keep the address when switching location or wizard steps.
             }
 
             function setMode(mode) {
@@ -308,6 +396,7 @@
                 });
                 submitLabel.textContent = mode === 'institucional' ? 'Enviar solicitud privada' : 'Solicitar reserva';
                 updateCapacity();
+                showStep(step);
             }
 
             modeButtons.forEach(button => button.addEventListener('click', () => setMode(button.dataset.reservationMode)));
