@@ -78,8 +78,6 @@
             dniInput.reportValidity();
         }
     });
-    // Keep the existing button as an explicit retry.
-    window.buscarDNI = buscarDNI;
     window.addEventListener('pageshow', event => {
         if (event.persisted) buscarDNI();
     });

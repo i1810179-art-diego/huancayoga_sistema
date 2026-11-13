@@ -77,15 +77,14 @@
             <article class="registration-password-card">
                 <div class="registration-card-label">Opción tradicional</div>
                 <h2>Registrarme con contraseña</h2>
-                <p>Consulta tu DNI y completa tus datos para crear un acceso independiente.</p>
+                <p>Ingresa los 8 dígitos de tu DNI. Tus nombres y apellidos se completarán automáticamente.</p>
 
                 <form method="post" action="{{ url_for('cliente_registro') }}" class="registration-password-form">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                     <label for="dni"><span>DNI</span></label>
-                    <div class="registration-dni-group">
+                    <div class="registration-dni-group registration-dni-auto">
                         <input type="text" name="dni" id="dni" maxlength="8" inputmode="numeric" pattern="[0-9]{8}" value="{{ dni_recibido }}" autocomplete="username" placeholder="8 dígitos" required>
-                        <button type="button" onclick="buscarDNI()">Buscar DNI</button>
                     </div>
                     <input type="hidden" name="validacion_dni" id="validacion-dni" value="">
                     <div id="mensaje-reniec" class="registration-reniec-message" aria-live="polite"></div>

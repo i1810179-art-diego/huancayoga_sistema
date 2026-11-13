@@ -24,7 +24,7 @@
             <div>
                 <span class="reservation-eyebrow">Agenda Huancayoga</span>
                 <h1>Elige cómo deseas reservar</h1>
-                <p>Cada solicitud aparta un horario completo para el cliente y su grupo.</p>
+                <p>Puedes elegir una fecha desde hoy hasta seis meses después. Cada solicitud aparta un horario completo para tu grupo.</p>
             </div>
             <div class="reservation-capacity-note">
                 <strong>Máximo 40</strong>
@@ -104,7 +104,7 @@
                             </label>
                             <label class="reservation-field">
                                 <span>Fecha</span>
-                                <input type="date" name="fecha" min="{{ fecha_minima }}" value="{{ form_data.get('fecha', '') }}" required>
+                                <input type="date" name="fecha" min="{{ fecha_minima }}" max="{{ fecha_maxima }}" value="{{ form_data.get('fecha', '') }}" required>
                             </label>
                             <label class="reservation-field">
                                 <span>Hora de inicio</span>
@@ -206,7 +206,7 @@
                             </label>
                             <label class="reservation-field">
                                 <span>Fecha deseada</span>
-                                <input type="date" name="institucion_fecha" min="{{ fecha_minima }}" value="{{ form_data.get('institucion_fecha', '') }}" required>
+                                <input type="date" name="institucion_fecha" min="{{ fecha_minima }}" max="{{ fecha_maxima }}" value="{{ form_data.get('institucion_fecha', '') }}" required>
                             </label>
                             <label class="reservation-field">
                                 <span>Hora de inicio</span>

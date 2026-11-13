@@ -9,6 +9,7 @@ from MySQLdb import IntegrityError
 from MySQLdb.cursors import DictCursor
 from itsdangerous import URLSafeSerializer, URLSafeTimedSerializer, BadSignature
 import os
+import calendar
 import requests
 import secrets
 import hashlib
@@ -1359,6 +1360,17 @@ def sincronizar_reserva_google_calendar(reserva_id, estado=None):
         enviar_alerta_sistema("google-calendar-sync", "Error al sincronizar una reserva", detalle)
         return False, "La reserva se guardó, pero Google Calendar quedó pendiente de sincronización."
 
+def limites_fechas_reserva(hoy=None):
+    if hoy is None:
+        hoy = datetime.now(timezone(timedelta(hours=-5))).date()
+    mes_absoluto = hoy.year * 12 + hoy.month - 1 + 6
+    anio, mes = divmod(mes_absoluto, 12)
+    mes += 1
+    ultimo_dia = calendar.monthrange(anio, mes)[1]
+    maxima = hoy.replace(year=anio, month=mes, day=min(hoy.day, ultimo_dia))
+    return hoy, maxima
+
+
 @app.route("/reservar", methods=["GET", "POST"])
 def reservar():
     if "cliente_id" not in session:
@@ -1409,7 +1421,7 @@ def reservar():
     }
 
     zona_horaria_peru = timezone(timedelta(hours=-5))
-    fecha_minima = datetime.now(zona_horaria_peru).date()
+    fecha_minima, fecha_maxima = limites_fechas_reserva()
 
     if request.method == "POST":
         cliente_id = session["cliente_id"]
@@ -1504,6 +1516,9 @@ def reservar():
         if fecha and fecha < fecha_minima:
             errores.append("No puedes reservar una fecha que ya pasó.")
 
+        if fecha and fecha > fecha_maxima:
+            errores.append("Solo puedes reservar hasta seis meses después de hoy.")
+
         if hora and hora.strftime("%H:%M") not in HORAS_RESERVA:
             errores.append(
                 "Selecciona un horario disponible entre las 07:00 y las 20:00, "
@@ -1577,6 +1592,7 @@ def reservar():
                 "reservar.html",
                 servicios=servicios,
                 fecha_minima=fecha_minima.isoformat(),
+                fecha_maxima=fecha_maxima.isoformat(),
                 cliente=cliente,
                 categorias_programa=CATEGORIAS_PROGRAMA,
                 duraciones_programa=DURACIONES_PROGRAMA,
@@ -1687,6 +1703,7 @@ def reservar():
         "reservar.html",
         servicios=servicios,
         fecha_minima=fecha_minima.isoformat(),
+        fecha_maxima=fecha_maxima.isoformat(),
         cliente=cliente,
         categorias_programa=CATEGORIAS_PROGRAMA,
         duraciones_programa=DURACIONES_PROGRAMA,
