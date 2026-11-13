@@ -7,7 +7,7 @@ from flask_mail import Mail, Message
 from werkzeug.utils import secure_filename
 from MySQLdb import IntegrityError
 from MySQLdb.cursors import DictCursor
-from itsdangerous import URLSafeSerializer, BadSignature
+from itsdangerous import URLSafeSerializer, URLSafeTimedSerializer, BadSignature
 import os
 import requests
 import secrets
@@ -3178,6 +3178,10 @@ def cliente_login():
 
     return render_template("cliente_login.html", **contexto_seguridad_acceso())
 
+def firmador_dni_registro():
+    return URLSafeTimedSerializer(app.secret_key, salt="registro-dni-validado-v1")
+
+
 @app.route("/cliente/registro", methods=["GET", "POST"])
 def cliente_registro():
     dni_recibido = request.args.get("dni", "")
@@ -3200,6 +3204,19 @@ def cliente_registro():
 
         if not re.fullmatch(r"[0-9]{8}", dni):
             flash("Ingresa un DNI válido de 8 dígitos.", "danger")
+            return redirect(url_for("cliente_registro", dni=dni))
+
+        try:
+            identidad = firmador_dni_registro().loads(
+                request.form.get("validacion_dni", ""), max_age=1800
+            )
+            if not isinstance(identidad, dict) or identidad.get("dni") != dni:
+                raise BadSignature("El DNI cambió después de consultarlo.")
+            nombres = identidad["nombres"]
+            apellido_paterno = identidad["apellido_paterno"]
+            apellido_materno = identidad["apellido_materno"]
+        except (BadSignature, KeyError, TypeError):
+            flash("Consulta nuevamente el DNI antes de registrarte. Los datos deben corresponder al DNI ingresado.", "danger")
             return redirect(url_for("cliente_registro", dni=dni))
 
         if not all((nombres, apellido_paterno, apellido_materno)):
@@ -3881,13 +3898,19 @@ def api_reniec(dni):
                 "mensaje": "No se encontraron datos para este DNI."
             }, 404
 
-        return {
-            "ok": True,
+        identidad = {
             "dni": dni,
             "nombres": nombres,
             "apellido_paterno": apellido_paterno,
-            "apellido_materno": apellido_materno
+            "apellido_materno": apellido_materno,
         }
+        response = app.json.response({
+            "ok": True,
+            **identidad,
+            "validacion_dni": firmador_dni_registro().dumps(identidad),
+        })
+        response.headers["Cache-Control"] = "no-store"
+        return response
 
     except Exception as e:
         print("Error RENIEC:", e)

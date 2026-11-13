@@ -87,6 +87,7 @@
                         <input type="text" name="dni" id="dni" maxlength="8" inputmode="numeric" pattern="[0-9]{8}" value="{{ dni_recibido }}" autocomplete="username" placeholder="8 dígitos" required>
                         <button type="button" onclick="buscarDNI()">Buscar DNI</button>
                     </div>
+                    <input type="hidden" name="validacion_dni" id="validacion-dni" value="">
                     <div id="mensaje-reniec" class="registration-reniec-message" aria-live="polite"></div>
 
                     <div class="registration-form-grid">
@@ -111,41 +112,6 @@
         <p class="registration-login-note">¿Ya tienes una cuenta? <a href="{{ url_for('cliente_login') }}">Ingresa aquí</a></p>
     </main>
 
-    <script>
-        async function buscarDNI() {
-            const dni = document.getElementById('dni').value.trim();
-            const mensaje = document.getElementById('mensaje-reniec');
-            const campos = ['nombres', 'apellido_paterno', 'apellido_materno'];
-
-            campos.forEach(id => document.getElementById(id).value = '');
-
-            if (!/^[0-9]{8}$/.test(dni)) {
-                mensaje.className = 'registration-reniec-message is-warning';
-                mensaje.textContent = 'Ingresa un DNI válido de 8 dígitos.';
-                return;
-            }
-
-            mensaje.className = 'registration-reniec-message is-loading';
-            mensaje.textContent = 'Buscando datos del DNI…';
-
-            try {
-                const response = await fetch(`/api/reniec/${encodeURIComponent(dni)}`);
-                const data = await response.json();
-
-                if (!response.ok || !data.ok) {
-                    throw new Error(data.mensaje || 'No pudimos consultar el DNI.');
-                }
-
-                document.getElementById('nombres').value = data.nombres || '';
-                document.getElementById('apellido_paterno').value = data.apellido_paterno || '';
-                document.getElementById('apellido_materno').value = data.apellido_materno || '';
-                mensaje.className = 'registration-reniec-message is-success';
-                mensaje.textContent = 'Datos encontrados correctamente.';
-            } catch (error) {
-                mensaje.className = 'registration-reniec-message is-error';
-                mensaje.textContent = error.message || 'Error al consultar el DNI.';
-            }
-        }
-    </script>
+    <script src="{{ url_for('static', filename='js/registro_dni.js') }}?v=20261112" defer></script>
 </body>
 </html>
